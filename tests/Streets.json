@@ -1,0 +1,86 @@
+[
+    {
+      "id": "docks",
+      "tags": ["wealth_poor"],
+      "priority": 0,
+      "condition": "",
+      "content": { "title": "The Docks" }
+    },
+    {
+      "id": "yards",
+      "tags": ["wealth_poor"],
+      "priority": 0,
+      "condition": "",
+      "content": { "title": "The Yards" }
+    },
+    {
+      "id": "slums",
+      "tags": ["wealth_poor"],
+      "priority": 0,
+      "condition": "",
+      "content": { "title": "The Slums" }
+    },
+    {
+      "id": "rookery",
+      "tags": ["wealth_poor"],
+      "priority": 0,
+      "condition": "",
+      "content": { "title": "The Rookery" }
+    },
+    {
+      "id": "market",
+      "tags": ["wealth_medium"],
+      "priority": 0,
+      "condition": "",
+      "content": { "title": "The Market" }
+    },
+    {
+      "id": "mainstreet",
+      "tags": ["wealth_medium"],
+      "priority": 0,
+      "condition": "",
+      "content": { "title": "Main Street" }
+    },
+    {
+      "id": "townsquare",
+      "tags": ["wealth_medium"],
+      "priority": 0,
+      "condition": "",
+      "content": { "title": "Town Square" }
+    },
+    {
+      "id": "bridge",
+      "tags": ["wealth_medium"],
+      "priority": 0,
+      "condition": "",
+      "content": { "title": "Old Bridge" }
+    },
+    {
+      "id": "park",
+      "tags": ["wealth_rich"],
+      "priority": 0,
+      "condition": "",
+      "content": { "title": "The Park" }
+    },
+    {
+      "id": "cathedralyard",
+      "tags": ["wealth_rich"],
+      "priority": 0,
+      "condition": "",
+      "content": { "title": "Cathedral Yard" }
+    },
+    {
+      "id": "castlestreet",
+      "tags": ["wealth_rich"],
+      "priority": 0,
+      "condition": "",
+      "content": { "title": "Castle Street" }
+    },
+    {
+      "id": "heights",
+      "tags": ["wealth_rich"],
+      "priority": 0,
+      "condition": "",
+      "content": { "title": "The Heights" }
+    }
+  ]

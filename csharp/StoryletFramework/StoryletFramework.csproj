@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <PackageId>StoryletFramework</PackageId>
+    <Version>0.0.1</Version>
+    <Authors>Ian Thomas</Authors>
+    <Company>Storyworlds</Company>
+    <Description>A library to manage storylets.</Description>
+    <PackageTags>csharp;library</PackageTags>
+
+  </PropertyGroup>
+
+</Project>
