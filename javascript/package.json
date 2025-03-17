@@ -1,0 +1,19 @@
+{
+  "name": "storylet-framework-js",
+  "type": "module",
+  "scripts": {
+    "test": "npx mocha",
+    "dist": "rm -rf ./dist && npx rollup -c && cp ../README.md ./dist",
+    "pack": "npm run dist && mkdir -p ../dist/v$npm_package_version && rm -rf ../dist/v$npm_package_version/$npm_package_name-v$npm_package_version.zip && zip -r ../dist/v$npm_package_version/$npm_package_name-v$npm_package_version.zip ./dist"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "description": "",
+  "devDependencies": {
+    "@rollup/plugin-terser": "^0.4.4",
+    "chai": "^5.1.2",
+    "mocha": "^10.8.2",
+    "rollup": "^4.27.3"
+  }
+}

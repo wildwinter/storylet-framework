@@ -1,0 +1,11 @@
+{
+    "name": "storylet-framework-cpp-src",
+    "scripts": {
+        "clean": "rm -rf build",
+        "build": "cmake -DBUILD_SHARED_LIBS=ON -S . -B build && cmake --build build",
+        "test": "npm run build && cd build && ctest --output-on-failure",
+        "dist": "rm -rf ./dist && mkdir -p ./dist/src && mkdir -p ./dist/include/storylet_framework && cp ./src/*.cpp ./dist/src && cp ./include/storylet_framework/*.h ./dist/include/storylet_framework && cp ../README.md ./dist",
+        "pack": "npm run dist && mkdir -p ../dist/v$npm_package_version && rm -rf ../dist/v$npm_package_version/$npm_package_name-v$npm_package_version.zip && zip -r ../dist/v$npm_package_version/$npm_package_name-v$npm_package_version.zip ./dist"
+    }
+  }
+  
