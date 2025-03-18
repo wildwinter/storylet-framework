@@ -2,7 +2,7 @@
     {
       "id": "docks",
       "tags": ["wealth_poor"],
-      "priority": 0,
+      "priority": -1,
       "condition": "",
       "content": { "title": "The Docks" }
     },

@@ -16,6 +16,13 @@ describe('Storylets', () => {
       const storylets = new Storylets();
       storylets.loadJson(json);
 
+      storylets.startDraw({}, [], 5, (results) => {
+        for (const storylet of results) {
+          console.log(storylet.content.title);
+        }
+      });
+
+      while (storylets.update());
       //assert.equal(result, true);
     });
   });
