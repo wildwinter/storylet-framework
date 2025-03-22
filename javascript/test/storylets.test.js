@@ -3,7 +3,7 @@
 
 import {loadTestFile} from '../test/testUtils.js';
 import {strict as assert} from 'assert';
-import {Storylets} from "../src/storylets.js";
+import {Deck} from "../src/storylets.js";
 
 describe('Storylets', () => {
 
@@ -13,16 +13,18 @@ describe('Storylets', () => {
       const source = loadTestFile("Streets.json");
       const json = JSON.parse(source);
 
-      const storylets = new Storylets();
-      storylets.loadJson(json);
+      const deck = new Deck();
+      deck.loadJson(json);
 
-      storylets.startDraw({}, [], 5, (results) => {
-        for (const storylet of results) {
-          console.log(storylet.content.title);
-        }
-      });
+      const context = {};
+      deck.refresh(context);
 
-      while (storylets.update());
+      const cards = deck.draw(5);
+
+      for (const storylet of cards) {
+        console.log(storylet.content.title);
+      }
+
       //assert.equal(result, true);
     });
   });

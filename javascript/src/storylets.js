@@ -32,68 +32,54 @@ export class Storylet {
 
 }
 
-export class Storylets {
+export class Deck {
 
   constructor() {
-    this._all = [];
-    this._toProcess = [];
-    this._available = new Map();
-    this._onComplete = null;
-    this._drawCount = 0;
+    this._all = new Map();
+
+    this._shuffled = [];
   }
 
   loadJson(json) {
-
     for (const item of json) {
       const storylet = Storylet.fromJson(item);
-      this._all.push(storylet);
+      if (this._all.has(storylet.id)) {
+        throw new Error(`Duplicate storylet id: '${storylet.id}'.`, item);
+      }
+      this._all.set(storylet.id, storylet);
     }
   }
 
-  startDraw(context, tags, count, onComplete) {
-    this._available.clear();
-    this._onComplete = onComplete;
-    this._toProcess = this._all.slice();
-    this._drawCount = count;
-  }
+  async refresh(context) {
 
-  update() {
-    this._processChunk();
-    if (this._toProcess.length>0)
-      return true;
-    return false;
-  }
+    this._shuffled = [];
+    const priorityAvailable = new Map();
+    const toProcess = [...this._all.values()];
 
-  _processChunk() {
-
-    if (this._toProcess==0)
-      return;
-
-    const CHUNK_SIZE=2;
-
-    for (let i=0;i<CHUNK_SIZE && this._toProcess.length>0;i++) {
-      const storylet = this._toProcess.shift();
-      if (!this._available.has(storylet.priority))
-        this._available.set(storylet.priority, []);
-      this._available.get(storylet.priority).push(storylet);
+    while (toProcess.length>0) {
+      const storylet = toProcess.shift();
+      if (!priorityAvailable.has(storylet.priority))
+        priorityAvailable.set(storylet.priority, []);
+      priorityAvailable.get(storylet.priority).push(storylet);
     }
 
-    if (this._toProcess.length>0)
-      return;
-
-    const drawCandidates = [];
-    const sortedPriorities = [...this._available.keys()].sort((a, b) => a - b);
+    const sortedPriorities = [...priorityAvailable.keys()].sort((a, b) => a - b);
     for (const priority of sortedPriorities) {
-      const bucket = this._available.get(priority);
+      const bucket = priorityAvailable.get(priority);
       const shuffledBucket = shuffle(bucket);
-      drawCandidates.push(...shuffledBucket);
+      this._shuffled.push(...shuffledBucket);
     }
 
-   const drawResults = drawCandidates.slice(0, this._drawCount);
-    if (this._onComplete) {
-      const onComplete = this._onComplete;
-      this._onComplete = null;
-      onComplete(drawResults);
+  }
+
+  draw(count) {
+    return this._shuffled.slice(0, count);
+  }
+
+  take(id) {
+    const index = this._available.findIndex(storylet => storylet.id === id);
+    if (index !== -1) {
+      this._available.splice(index, 1);
     }
   }
 
