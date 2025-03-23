@@ -1,5 +1,3 @@
-Setting as array
-Strip comments out of JSON
 Repeat (never, always, draw_count)
 Debugging
 Alt to async
@@ -10,3 +8,5 @@ Auto-Specificity
 Condition test
 Parse priorities
 Simple types don't run
+Setting as array
+Strip comments out of JSON

@@ -1,7 +1,7 @@
 // This file is part of an MIT-licensed project: see LICENSE file or README.md for details.
 // Copyright (c) 2025 Ian Thomas
 
-import {loadTestFile} from '../test/testUtils.js';
+import {loadJsonFile} from '../test/testUtils.js';
 import {strict as assert} from 'assert';
 import {Deck, evalExpression} from "../src/storylets.js";
 
@@ -10,8 +10,7 @@ describe('Storylets', () => {
   describe('SimpleStreets', () => {
     it('should match', () => {
 
-      const source = loadTestFile("Streets.json");
-      const json = JSON.parse(source);
+      const json = loadJsonFile("Streets.jsonc");
       const deck = Deck.fromJson(json);
 
       const context = {};
@@ -27,8 +26,8 @@ describe('Storylets', () => {
 
     it('should match', () => {
 
-      const streets = Deck.fromJson(JSON.parse(loadTestFile("Streets.json")));
-      const encounters = Deck.fromJson(JSON.parse(loadTestFile("Encounters.json")));
+      const streets = Deck.fromJson(loadJsonFile("Streets.jsonc"));
+      const encounters = Deck.fromJson(loadJsonFile("Encounters.jsonc"));
 
       const context = {
         met_noble:false,
