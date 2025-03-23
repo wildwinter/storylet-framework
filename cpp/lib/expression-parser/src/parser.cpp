@@ -42,7 +42,6 @@ namespace ExpressionParser {
 
             if (!token.empty()) {
                 tokens.push_back(token);
-                std::cerr << "Matched token: '" << token << "' at pos " << pos << std::endl;
             }
 
             pos += static_cast<int>(match.position() + match.length());

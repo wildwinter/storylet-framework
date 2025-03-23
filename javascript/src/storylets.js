@@ -3,7 +3,7 @@
 
 import { ExpressionParser } from '../lib/expression-parser/expressionParser.js';
 
-const expressionParser = new ExpressionParser();
+export const expressionParser = new ExpressionParser();
 
 export class Storylet {
 
@@ -11,14 +11,17 @@ export class Storylet {
     this.id = id;
     this.condition = "";
     this._compiledCondition = null;
+    this._specificity = 0;
     this.priority = 0;
     this.content = {};
   }
 
   compileCondition() {
     this._compiledCondition = null;
+    this._specificity = 0;
     if (this.condition!="") {
       this._compiledCondition = expressionParser.parse(this.condition);
+      this._specificity = this._compiledCondition.specificity;
     }
   }
 
@@ -27,6 +30,8 @@ export class Storylet {
       return true;
     return this._compiledCondition.evaluate(context);
   }
+
+  get specificity() {return this._specificity;}
 
   static fromJson(json) {
 
@@ -96,12 +101,15 @@ export class Deck {
         continue;
       }
 
-      if (!priorityAvailable.has(storylet.priority))
-        priorityAvailable.set(storylet.priority, []);
-      priorityAvailable.get(storylet.priority).push(storylet);
+      let workingPriority = storylet.priority*100;
+      workingPriority+=storylet.specificity;
+
+      if (!priorityAvailable.has(workingPriority))
+        priorityAvailable.set(workingPriority, []);
+      priorityAvailable.get(workingPriority).push(storylet);
     }
 
-    const sortedPriorities = [...priorityAvailable.keys()].sort((a, b) => a - b);
+    const sortedPriorities = [...priorityAvailable.keys()].sort((a, b) => b - a);
     for (const priority of sortedPriorities) {
       const bucket = priorityAvailable.get(priority);
       const shuffledBucket = shuffle(bucket);

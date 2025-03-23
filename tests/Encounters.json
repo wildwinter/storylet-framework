@@ -10,8 +10,23 @@
         "content": { "title": "Meeting with Fruit Seller" }
     },
     {
-        "id": "noble",
+        "id": "banker",
         "condition": "street_wealth>=0",
-        "content": { "title": "Meeting with Noble" }
+        "content": { 
+            "title": "Meeting with Banker"
+        }
+    },
+    {
+        "id": "noble",
+        "condition": "street_wealth>=0 and !met_noble",
+        "content": { 
+            "title": "Meeting with Noble",
+            "contextUpdates": {"met_noble":"true"}
+        }
+    },
+    {
+        "id": "noble_castle_street",
+        "condition": "street_id=='castlestreet' and met_noble",
+        "content": { "title": "Second Meeting with Noble - on Castle Street" }
     }
 ]

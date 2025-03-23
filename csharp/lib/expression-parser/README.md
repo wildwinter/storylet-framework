@@ -109,6 +109,7 @@ Supported operators are:
 * **For debugging:** You can use `expression.dump_structure()` to see what the parser has actually parsed.
 * **For debugging:** When evaluating, you can pass a `dump_eval` string array, and the parser will then write down the steps its taken as it evaluates.
 * **Writing:** If for some crazy reason you want to, you can use the `write()` function to turn the parsed expression back into a string. The `Writer.StringFormat` settings will let you say how you want string values to be delimited.
+* **Specificity:** You can use `expression.specificity` (or equivalents) to get a number which describes the number of clauses in a test, i.e. how specific the expression is. The more ANDs or ORs, the higher the specificity. This is useful in some cases for prioritising content with expressions which are more specific than others. 
 
 ### Javascript as an ES6 module
 ```javascript

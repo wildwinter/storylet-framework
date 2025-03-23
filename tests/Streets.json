@@ -1,7 +1,7 @@
 [
     {
       "id": "docks",
-      "priority": -1,
+      "priority": 10,
       "condition": "",
       "content": { "title": "The Docks", "wealth":-1, "tags":["water"] }
     },

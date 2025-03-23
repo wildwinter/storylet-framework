@@ -1,7 +1,8 @@
-Condition test
+Debugging
 Likelihood
 Alt to async
-Auto-Specificity
 
 DONE
 ----
+Auto-Specificity
+Condition test

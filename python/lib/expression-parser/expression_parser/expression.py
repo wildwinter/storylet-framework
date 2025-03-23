@@ -11,6 +11,7 @@ class ExpressionNode:
     def __init__(self, name: str, precedence: int) -> None:
         self._name = name
         self._precedence = precedence
+        self._specificity = 0
 
     @abstractmethod
     def evaluate(self, context: Dict[str, Any], dump_eval: Optional[List[str]] = None) -> Any:
@@ -24,6 +25,10 @@ class ExpressionNode:
     def write(self) -> str:
         raise NotImplementedError()
     
+    @property
+    def specificity(self):
+        return self._specificity
+    
 
 class BinaryOp(ExpressionNode):
     @abstractmethod
@@ -32,6 +37,7 @@ class BinaryOp(ExpressionNode):
         self._left = left
         self._op = op
         self._right = right
+        self._specificity = left.specificity + right.specificity;
     
     def evaluate(self, context: Dict[str, Any], dump_eval: Optional[List[str]] = None) -> Any:
         left_val = self._left.evaluate(context, dump_eval)
@@ -80,6 +86,7 @@ class BinaryOp(ExpressionNode):
 class OpOr(BinaryOp):
     def __init__(self, left: ExpressionNode, right: ExpressionNode) -> None:
         super().__init__("Or", left, "or", right, 40)
+        self._specificity+=1
 
     def _short_circuit(self, left_val: Any) -> tuple[bool, Any]:
         result = _make_bool(left_val)
@@ -94,6 +101,7 @@ class OpOr(BinaryOp):
 class OpAnd(BinaryOp):
     def __init__(self, left: ExpressionNode, right: ExpressionNode) -> None:
         super().__init__("And", left, "and", right, 50)
+        self._specificity+=1
 
     def _short_circuit(self, left_val: Any) -> tuple[bool, Any]:
         result = _make_bool(left_val)
@@ -202,6 +210,7 @@ class UnaryOp(ExpressionNode):
         super().__init__(name, precedence)
         self._operand = operand
         self._op = op
+        self._specificity = operand.specificity
 
     def evaluate(self, context: Dict[str, Any], dump_eval: Optional[List[str]] = None) -> Any:
         val = self._operand.evaluate(context, dump_eval)

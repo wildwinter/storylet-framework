@@ -3,7 +3,7 @@
 
 import {loadTestFile} from '../test/testUtils.js';
 import {strict as assert} from 'assert';
-import {Deck} from "../src/storylets.js";
+import {Deck, expressionParser} from "../src/storylets.js";
 
 describe('Storylets', () => {
 
@@ -31,15 +31,30 @@ describe('Storylets', () => {
       const encounters = Deck.fromJson(JSON.parse(loadTestFile("Encounters.json")));
 
       const context = {
+        met_noble:false,
+        street_id:"",
         street_wealth:0,
         street_tag:null
       };
 
       let setStreet = (street) => {
+        context.street_id = street.id;
         context.street_wealth = street.content.wealth;
         context.street_tag = (tag) => {return street.content.tags.includes(tag)};
         console.log(`Location:"${street.content.title}"`);
       };
+
+      let doEncounter = (encounter) => {
+        console.log("  ", encounter.content.title);
+        if (encounter.content.contextUpdates) {
+          for (const [contextVar, value] of Object.entries(encounter.content.contextUpdates)) {
+            const expression = expressionParser.parse(value);
+            const result = expression.evaluate(context);
+            console.log(`Setting ${contextVar} to ${result}`);
+            context[contextVar] = result;
+          }
+        }
+      }
 
       streets.refresh(context);
 
@@ -49,7 +64,7 @@ describe('Storylets', () => {
           setStreet(street);
           encounters.refresh(context);
           let encounter = encounters.draw();
-          console.log("  ", encounter.content.title);
+          doEncounter(encounter);
       }
 
     });

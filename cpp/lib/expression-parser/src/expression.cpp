@@ -135,7 +135,9 @@ std::string FormatValue(const std::any &val) {
 // ---------------------
 BinaryOp::BinaryOp(const std::string &name, std::shared_ptr<ExpressionNode> left, const std::string &op,
                    std::shared_ptr<ExpressionNode> right, int precedence)
-    : ExpressionNode(name, precedence), Left(left), Right(right), Op(op) {}
+    : ExpressionNode(name, precedence), Left(left), Right(right), Op(op) {
+        this->_specificity = left->GetSpecificity() + right->GetSpecificity();
+    }
 
 std::any BinaryOp::Evaluate(const Context &context, std::vector<std::string>* dumpEval) const {
     std::any leftVal = Left->Evaluate(context, dumpEval);
@@ -182,7 +184,9 @@ std::string BinaryOp::Write() const {
 
 // Concrete BinaryOp classes
 OpOr::OpOr(std::shared_ptr<ExpressionNode> left, std::shared_ptr<ExpressionNode> right)
-    : BinaryOp("Or", left, "or", right, 40) {}
+    : BinaryOp("Or", left, "or", right, 40) {
+        this->_specificity+=1;
+    }
 
 std::pair<bool, std::any> OpOr::ShortCircuit(const std::any& leftVal) const {
 
@@ -197,7 +201,9 @@ std::any OpOr::DoEval(const std::any &leftVal, const std::any &rightVal) const {
 }
 
 OpAnd::OpAnd(std::shared_ptr<ExpressionNode> left, std::shared_ptr<ExpressionNode> right)
-    : BinaryOp("And", left, "and", right, 50) {}
+    : BinaryOp("And", left, "and", right, 50) {
+        this->_specificity+=1;
+    }
 
 std::pair<bool, std::any> OpAnd::ShortCircuit(const std::any& leftVal) const {
 
@@ -298,7 +304,9 @@ std::any OpLessThanEquals::DoEval(const std::any &leftVal, const std::any &right
 // UnaryOp implementations
 // ---------------------
 UnaryOp::UnaryOp(const std::string &name, const std::string &op, std::shared_ptr<ExpressionNode> operand, int precedence)
-    : ExpressionNode(name, precedence), Operand(operand), Op(op) {}
+    : ExpressionNode(name, precedence), Operand(operand), Op(op) {
+        this->_specificity = operand->GetSpecificity();
+    }
 
 std::any UnaryOp::Evaluate(const Context &context, std::vector<std::string>* dumpEval) const {
     std::any val = Operand->Evaluate(context, dumpEval);

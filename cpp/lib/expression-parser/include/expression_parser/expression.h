@@ -42,6 +42,7 @@ class ExpressionNode {
 public:
     std::string Name;
     int Precedence;
+    int GetSpecificity() const {return _specificity;}
 
     ExpressionNode(const std::string &name, int precedence)
         : Name(name), Precedence(precedence) {}
@@ -50,6 +51,9 @@ public:
     virtual std::any Evaluate(const Context &context, std::vector<std::string>* dumpEval = nullptr) const = 0;
     virtual std::string DumpStructure(int indent = 0) const = 0;
     virtual std::string Write() const = 0;
+
+protected:
+    int _specificity = 0;
 };
 
 // ---------------------
