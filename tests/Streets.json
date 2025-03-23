@@ -39,7 +39,7 @@
       "id": "townsquare",
       "priority": 0,
       "condition": "",
-      "content": { "title": "Town Square", "wealth":1, "tags":[] }
+      "content": { "title": "Town Square", "wealth":1, "tags":["shops"] }
     },
     {
       "id": "bridge",

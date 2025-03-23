@@ -1,13 +1,31 @@
 // This file is part of an MIT-licensed project: see LICENSE file or README.md for details.
 // Copyright (c) 2025 Ian Thomas
 
+import { ExpressionParser } from '../lib/expression-parser/expressionParser.js';
+
+const expressionParser = new ExpressionParser();
+
 export class Storylet {
 
   constructor(id) {
     this.id = id;
     this.condition = "";
+    this._compiledCondition = null;
     this.priority = 0;
     this.content = {};
+  }
+
+  compileCondition() {
+    this._compiledCondition = null;
+    if (this.condition!="") {
+      this._compiledCondition = expressionParser.parse(this.condition);
+    }
+  }
+
+  checkCondition(context) {
+    if (!this._compiledCondition)
+      return true;
+    return this._compiledCondition.evaluate(context);
   }
 
   static fromJson(json) {
@@ -17,8 +35,10 @@ export class Storylet {
 
     const storylet = new Storylet(json.id);
 
-    if ("condition" in json)
+    if ("condition" in json) {
       storylet.condition = json.condition;
+      storylet.compileCondition();
+    }
     if ("priority" in json)
       storylet.priority = json.priority;
     if ("content" in json)
@@ -38,6 +58,12 @@ export class Deck {
     this._currentDraw = 0;
   }
 
+  static fromJson(json) {
+    const deck = new Deck();
+    deck.loadJson(json);
+    return deck
+  }
+
   loadJson(json) {
     for (const item of json) {
       const storylet = Storylet.fromJson(item);
@@ -48,7 +74,7 @@ export class Deck {
     }
   }
 
-  async refresh(context, filter=null) {
+  refresh(context, filter=null) {
 
     this._drawPile = [];
     const priorityAvailable = new Map();
@@ -63,6 +89,11 @@ export class Deck {
         if (!filter(storylet)) {
           continue;
         }
+      }
+
+      if (!storylet.checkCondition(context)) {
+        //console.log(`Storylet '${storylet.id}': condition '${storylet.condition}' didn't pass.`);
+        continue;
       }
 
       if (!priorityAvailable.has(storylet.priority))
@@ -80,6 +111,9 @@ export class Deck {
   }
 
   draw() {
+    if (this._drawPile.length==0)
+      return null;
+
     const storylet = this._drawPile.shift();
     this._lastDrawn.set(storylet.id, this._currentDraw++);
     return storylet;

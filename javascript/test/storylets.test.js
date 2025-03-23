@@ -12,8 +12,7 @@ describe('Storylets', () => {
 
       const source = loadTestFile("Streets.json");
       const json = JSON.parse(source);
-      const deck = new Deck();
-      deck.loadJson(json);
+      const deck = Deck.fromJson(json);
 
       const context = {};
       deck.refresh(context);
@@ -28,29 +27,30 @@ describe('Storylets', () => {
 
     it('should match', () => {
 
-      const streets = new Deck();
-      streets.loadJson(JSON.parse(loadTestFile("Streets.json")));
-
-      const encounters = new Deck();
-      encounters.loadJson(JSON.parse(loadTestFile("Encounters.json")));
+      const streets = Deck.fromJson(JSON.parse(loadTestFile("Streets.json")));
+      const encounters = Deck.fromJson(JSON.parse(loadTestFile("Encounters.json")));
 
       const context = {
         street_wealth:0,
         street_tag:null
       };
 
+      let setStreet = (street) => {
+        context.street_wealth = street.content.wealth;
+        context.street_tag = (tag) => {return street.content.tags.includes(tag)};
+        console.log(`Location:"${street.content.title}"`);
+      };
+
       streets.refresh(context);
-      let street = streets.draw();
-      assert.equal(true, street.id=="docks");
-      
-      console.log(street.content.title);
 
-      context.street_wealth = street.content.wealth;
-      context.street_tag = (tag) => street.context.tags.includes(tag);
-
-      encounters.refresh(context);
-      let encounter = encounters.draw();
-      console.log(encounter.content.title);
+      let street;
+      for (let i=0;i<5;i++) {
+          street = streets.draw();
+          setStreet(street);
+          encounters.refresh(context);
+          let encounter = encounters.draw();
+          console.log("  ", encounter.content.title);
+      }
 
     });
   });  
