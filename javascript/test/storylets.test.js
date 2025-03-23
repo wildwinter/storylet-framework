@@ -56,7 +56,7 @@ describe('Storylets', () => {
         }
       }
 
-      streets.refresh(context);
+      streets.refresh(context);//, (street)=>street.content.wealth>=0);
 
       let street;
       for (let i=0;i<5;i++) {

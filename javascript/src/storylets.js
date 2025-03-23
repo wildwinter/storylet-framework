@@ -12,9 +12,12 @@ export function evalExpression(val, context) {
   if (typeof val==="boolean"||typeof val==="number")
     return val;
 
-  const expression = expressionParser.parse(str);
+  const expression = expressionParser.parse(val);
   return expression.evaluate(context);
 }
+
+const REDRAW_ALWAYS = 0;
+const REDRAW_NEVER = -1;
 
 export class Storylet {
 
@@ -24,6 +27,8 @@ export class Storylet {
     this.content = {};
     this._compiledCondition = null;
     this._priority = 0;
+    this._nextDraw = 0;
+    this.redraw = REDRAW_ALWAYS;
   }
 
   compileCondition() {
@@ -50,12 +55,34 @@ export class Storylet {
     return workingPriority;
   }
 
+  canDraw(currentDraw) {
+    if (this.redraw == REDRAW_NEVER && this._nextDraw<0)
+      return false;
+    if (this.redraw == REDRAW_ALWAYS)
+      return true;
+    return currentDraw>=this._nextDraw;
+  }
+
+  drawn(currentDraw) {
+    this._nextDraw = currentDraw + this.redraw;
+  }
+
   static fromJson(json) {
 
     if (!("id" in json))
       throw new Error("No 'id' property in the storylet JSON.", json);
 
     const storylet = new Storylet(json.id);
+
+    if ("redraw" in json) {
+      let val = json.redraw;
+      if (val=="always")
+        storylet.redraw = REDRAW_ALWAYS;
+      else if (val=="never")
+        storylet.redraw = REDRAW_NEVER;
+      else
+        storylet.redraw = parseInt(val);
+    }
 
     if ("condition" in json) {
       storylet.condition = json.condition;
@@ -77,7 +104,6 @@ export class Deck {
   constructor() {
     this._all = new Map();
     this._drawPile = [];
-    this._lastDrawn = new Map();
     this._currentDraw = 0;
   }
 
@@ -97,6 +123,10 @@ export class Deck {
     }
   }
 
+  reset() {
+    this.currentDraw = 0;
+  }
+
   refresh(context, filter=null) {
 
     this._drawPile = [];
@@ -106,6 +136,9 @@ export class Deck {
     while (toProcess.length>0) {
       
       const storylet = toProcess.shift();
+
+      if (!storylet.canDraw(this._currentDraw))
+        continue;
       
       // Apply filter, if available
       if (filter!=null) {
@@ -139,7 +172,8 @@ export class Deck {
       return null;
 
     const storylet = this._drawPile.shift();
-    this._lastDrawn.set(storylet.id, this._currentDraw++);
+    storylet.drawn(this._currentDraw);
+    this._currentDraw++;
     return storylet;
   }
 }

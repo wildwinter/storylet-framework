@@ -18,7 +18,8 @@
     },
     {
         "id": "noble",
-        "condition": "street_wealth>=0 and !met_noble",
+        "redraw": "never",
+        "condition": "street_wealth>=0",
         "content": { 
             "title": "Meeting with Noble",
             "contextUpdates": [{"met_noble":true}]
