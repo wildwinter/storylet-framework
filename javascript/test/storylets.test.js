@@ -3,7 +3,7 @@
 
 import {loadTestFile} from '../test/testUtils.js';
 import {strict as assert} from 'assert';
-import {Deck, expressionParser} from "../src/storylets.js";
+import {Deck, evalExpression} from "../src/storylets.js";
 
 describe('Storylets', () => {
 
@@ -48,8 +48,7 @@ describe('Storylets', () => {
         console.log("  ", encounter.content.title);
         if (encounter.content.contextUpdates) {
           for (const [contextVar, value] of Object.entries(encounter.content.contextUpdates)) {
-            const expression = expressionParser.parse(value);
-            const result = expression.evaluate(context);
+            const result = evalExpression(value, context);
             console.log(`Setting ${contextVar} to ${result}`);
             context[contextVar] = result;
           }

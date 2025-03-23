@@ -2,26 +2,30 @@
 // Copyright (c) 2025 Ian Thomas
 
 import { ExpressionParser } from '../lib/expression-parser/expressionParser.js';
+import { shuffleArray, strToNumeric} from "./utils.js";
 
-export const expressionParser = new ExpressionParser();
+const expressionParser = new ExpressionParser();
+const USE_SPECIFICITY = true;
+
+export function evalExpression(str, context) {
+  const expression = expressionParser.parse(str);
+  return expression.evaluate(context);
+}
 
 export class Storylet {
 
   constructor(id) {
     this.id = id;
     this.condition = "";
-    this._compiledCondition = null;
-    this._specificity = 0;
-    this.priority = 0;
     this.content = {};
+    this._compiledCondition = null;
+    this._priority = 0;
   }
 
   compileCondition() {
     this._compiledCondition = null;
-    this._specificity = 0;
     if (this.condition!="") {
       this._compiledCondition = expressionParser.parse(this.condition);
-      this._specificity = this._compiledCondition.specificity;
     }
   }
 
@@ -31,7 +35,21 @@ export class Storylet {
     return this._compiledCondition.evaluate(context);
   }
 
-  get specificity() {return this._specificity;}
+  set priority(numOrExpression) { this._priority = numOrExpression;}
+
+  calcCurrentPriority(context) {
+    let workingPriority = 0;
+    if (typeof this._priority === "number") {
+      workingPriority = this._priority;
+    } else {
+      workingPriority = + evalExpression(this._priority, context);
+    }
+    if (USE_SPECIFICITY && this._compiledCondition!=null) {
+      workingPriority = workingPriority*100;
+      workingPriority += this._compiledCondition.specificity;
+    }
+    return workingPriority;
+  }
 
   static fromJson(json) {
 
@@ -44,8 +62,9 @@ export class Storylet {
       storylet.condition = json.condition;
       storylet.compileCondition();
     }
-    if ("priority" in json)
-      storylet.priority = json.priority;
+    if ("priority" in json) {
+        storylet.priority = json.priority;
+    }
     if ("content" in json)
       storylet.content = json.content;
     return storylet;
@@ -101,18 +120,16 @@ export class Deck {
         continue;
       }
 
-      let workingPriority = storylet.priority*100;
-      workingPriority+=storylet.specificity;
-
-      if (!priorityAvailable.has(workingPriority))
-        priorityAvailable.set(workingPriority, []);
-      priorityAvailable.get(workingPriority).push(storylet);
+      let priority = storylet.calcCurrentPriority(context);
+      if (!priorityAvailable.has(priority))
+        priorityAvailable.set(priority, []);
+      priorityAvailable.get(priority).push(storylet);
     }
 
     const sortedPriorities = [...priorityAvailable.keys()].sort((a, b) => b - a);
     for (const priority of sortedPriorities) {
       const bucket = priorityAvailable.get(priority);
-      const shuffledBucket = shuffle(bucket);
+      const shuffledBucket = shuffleArray(bucket);
       this._drawPile.push(...shuffledBucket);
     }
 
@@ -126,13 +143,4 @@ export class Deck {
     this._lastDrawn.set(storylet.id, this._currentDraw++);
     return storylet;
   }
-}
-
-
-function shuffle(array) {
-  for (let i = array.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]];
-  }
-  return array;
 }
