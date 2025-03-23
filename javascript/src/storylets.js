@@ -2,12 +2,16 @@
 // Copyright (c) 2025 Ian Thomas
 
 import { ExpressionParser } from '../lib/expression-parser/expressionParser.js';
-import { shuffleArray, strToNumeric} from "./utils.js";
+import { shuffleArray } from "./utils.js";
 
 const expressionParser = new ExpressionParser();
 const USE_SPECIFICITY = true;
 
-export function evalExpression(str, context) {
+export function evalExpression(val, context) {
+
+  if (typeof val==="boolean"||typeof val==="number")
+    return val;
+
   const expression = expressionParser.parse(str);
   return expression.evaluate(context);
 }
@@ -38,12 +42,7 @@ export class Storylet {
   set priority(numOrExpression) { this._priority = numOrExpression;}
 
   calcCurrentPriority(context) {
-    let workingPriority = 0;
-    if (typeof this._priority === "number") {
-      workingPriority = this._priority;
-    } else {
-      workingPriority = + evalExpression(this._priority, context);
-    }
+    let workingPriority = + evalExpression(this._priority, context);
     if (USE_SPECIFICITY && this._compiledCondition!=null) {
       workingPriority = workingPriority*100;
       workingPriority += this._compiledCondition.specificity;

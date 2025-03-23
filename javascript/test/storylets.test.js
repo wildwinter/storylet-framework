@@ -47,10 +47,12 @@ describe('Storylets', () => {
       let doEncounter = (encounter) => {
         console.log("  ", encounter.content.title);
         if (encounter.content.contextUpdates) {
-          for (const [contextVar, value] of Object.entries(encounter.content.contextUpdates)) {
-            const result = evalExpression(value, context);
-            console.log(`Setting ${contextVar} to ${result}`);
-            context[contextVar] = result;
+          for (var update of encounter.content.contextUpdates) {
+            for (const [contextVar, value] of Object.entries(update)) {
+              const result = evalExpression(value, context);
+              console.log(`Setting ${contextVar} to ${result}`);
+              context[contextVar] = result;
+            }
           }
         }
       }

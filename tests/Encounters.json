@@ -21,7 +21,7 @@
         "condition": "street_wealth>=0 and !met_noble",
         "content": { 
             "title": "Meeting with Noble",
-            "contextUpdates": {"met_noble":"true"}
+            "contextUpdates": [{"met_noble":true}]
         }
     },
     {

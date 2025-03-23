@@ -8,11 +8,3 @@ export function shuffleArray(array) {
   }
   return array;
 }
-
-export function strToNumeric(str) {
-    const numericRegex = /^-?\d+(\.\d+)?$/;
-    if (numericRegex.test(str)) {
-      return parseFloat(str);
-    }
-    return null;
-}

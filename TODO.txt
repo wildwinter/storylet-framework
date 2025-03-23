@@ -1,5 +1,4 @@
 Setting as array
-Simple types don't run
 Strip comments out of JSON
 Repeat (never, always, draw_count)
 Debugging
@@ -10,3 +9,4 @@ DONE
 Auto-Specificity
 Condition test
 Parse priorities
+Simple types don't run
