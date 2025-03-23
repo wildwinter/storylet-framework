@@ -1,5 +1,7 @@
+Condition test
 Likelihood
 Alt to async
+Auto-Specificity
 
 DONE
 ----

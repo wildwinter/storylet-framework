@@ -5,7 +5,6 @@ export class Storylet {
 
   constructor(id) {
     this.id = id;
-    this.tags = [];
     this.condition = "";
     this.priority = 0;
     this.content = {};
@@ -18,8 +17,6 @@ export class Storylet {
 
     const storylet = new Storylet(json.id);
 
-    if ("tags" in json)
-      storylet.tags = json.tags;
     if ("condition" in json)
       storylet.condition = json.condition;
     if ("priority" in json)
@@ -36,8 +33,9 @@ export class Deck {
 
   constructor() {
     this._all = new Map();
-
-    this._shuffled = [];
+    this._drawPile = [];
+    this._lastDrawn = new Map();
+    this._currentDraw = 0;
   }
 
   loadJson(json) {
@@ -50,14 +48,23 @@ export class Deck {
     }
   }
 
-  async refresh(context) {
+  async refresh(context, filter=null) {
 
-    this._shuffled = [];
+    this._drawPile = [];
     const priorityAvailable = new Map();
     const toProcess = [...this._all.values()];
 
     while (toProcess.length>0) {
+      
       const storylet = toProcess.shift();
+      
+      // Apply filter, if available
+      if (filter!=null) {
+        if (!filter(storylet)) {
+          continue;
+        }
+      }
+
       if (!priorityAvailable.has(storylet.priority))
         priorityAvailable.set(storylet.priority, []);
       priorityAvailable.get(storylet.priority).push(storylet);
@@ -67,23 +74,18 @@ export class Deck {
     for (const priority of sortedPriorities) {
       const bucket = priorityAvailable.get(priority);
       const shuffledBucket = shuffle(bucket);
-      this._shuffled.push(...shuffledBucket);
+      this._drawPile.push(...shuffledBucket);
     }
 
   }
 
-  draw(count) {
-    return this._shuffled.slice(0, count);
+  draw() {
+    const storylet = this._drawPile.shift();
+    this._lastDrawn.set(storylet.id, this._currentDraw++);
+    return storylet;
   }
-
-  take(id) {
-    const index = this._available.findIndex(storylet => storylet.id === id);
-    if (index !== -1) {
-      this._available.splice(index, 1);
-    }
-  }
-
 }
+
 
 function shuffle(array) {
   for (let i = array.length - 1; i > 0; i--) {

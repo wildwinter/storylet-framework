@@ -1,0 +1,17 @@
+[
+    {
+        "id": "worker",
+        "condition": "street_wealth<=0",
+        "content": { "title": "Meeting with Worker" }
+    },
+    {
+        "id": "fruit_seller",
+        "condition": "street_tag('shops')",
+        "content": { "title": "Meeting with Fruit Seller" }
+    },
+    {
+        "id": "noble",
+        "condition": "street_wealth>=0",
+        "content": { "title": "Meeting with Noble" }
+    }
+]
