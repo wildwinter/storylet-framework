@@ -1,5 +1,11 @@
 [
     {
+        // This is set up before any storylets in this deck are run.
+        "context": {
+            "met_noble": false
+        }
+    },
+    {
         "id": "worker",
         "condition": "street_wealth<=0",
         "content": { "title": "Meeting with Worker" }
@@ -20,9 +26,9 @@
         "id": "noble",
         "redraw": "never",
         "condition": "street_wealth>=0",
+        "updateOnDrawn": {"met_noble":true},
         "content": { 
-            "title": "Meeting with Noble",
-            "contextUpdates": [{"met_noble":true}]
+            "title": "Meeting with Noble"
         }
     },
     {

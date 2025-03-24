@@ -3,7 +3,7 @@
 
 import {loadJsonFile} from '../test/testUtils.js';
 import {strict as assert} from 'assert';
-import {Deck, evalExpression} from "../src/storylets.js";
+import {Deck} from "../src/storylets.js";
 
 describe('Storylets', () => {
 
@@ -13,8 +13,7 @@ describe('Storylets', () => {
       const json = loadJsonFile("Streets.jsonc");
       const deck = Deck.fromJson(json);
 
-      const context = {};
-      deck.refresh(context);
+      deck.refresh();
       let card = deck.draw();
 
       assert.equal(true, card.id=="docks");
@@ -26,15 +25,14 @@ describe('Storylets', () => {
 
     it('should match', () => {
 
-      const streets = Deck.fromJson(loadJsonFile("Streets.jsonc"));
-      const encounters = Deck.fromJson(loadJsonFile("Encounters.jsonc"));
-
       const context = {
-        met_noble:false,
         street_id:"",
         street_wealth:0,
         street_tag:null
       };
+
+      const streets = Deck.fromJson(loadJsonFile("Streets.jsonc"), context);
+      const encounters = Deck.fromJson(loadJsonFile("Encounters.jsonc"), context);
 
       let setStreet = (street) => {
         context.street_id = street.id;
@@ -45,24 +43,15 @@ describe('Storylets', () => {
 
       let doEncounter = (encounter) => {
         console.log("  ", encounter.content.title);
-        if (encounter.content.contextUpdates) {
-          for (var update of encounter.content.contextUpdates) {
-            for (const [contextVar, value] of Object.entries(update)) {
-              const result = evalExpression(value, context);
-              console.log(`Setting ${contextVar} to ${result}`);
-              context[contextVar] = result;
-            }
-          }
-        }
       }
 
-      streets.refresh(context);//, (street)=>street.content.wealth>=0);
+      streets.refresh();
 
       let street;
       for (let i=0;i<5;i++) {
           street = streets.draw();
           setStreet(street);
-          encounters.refresh(context);
+          encounters.refresh();
           let encounter = encounters.draw();
           doEncounter(encounter);
       }

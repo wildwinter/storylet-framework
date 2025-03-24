@@ -16,6 +16,26 @@ export function evalExpression(val, context) {
   return expression.evaluate(context);
 }
 
+export function initContext(context, vars) {
+  for (const [varName, value] of Object.entries(vars)) {
+    const result = evalExpression(value, context);
+    if (!(varName in context)) {
+      context[varName] = result;
+    }
+  }
+}
+
+export function updateContext(context, vars) {
+  for (const [varName, value] of Object.entries(vars)) {
+    const result = evalExpression(value, context);
+    console.log(`Setting ${varName} to ${result}`);
+    if (!(varName in context)) {
+      throw new Error(`Context var: '${varName}' undefined.`);
+    }
+    context[varName] = result;
+  }
+}
+
 const REDRAW_ALWAYS = 0;
 const REDRAW_NEVER = -1;
 
@@ -25,10 +45,12 @@ export class Storylet {
     this.id = id;
     this.condition = "";
     this.content = {};
+    this.redraw = REDRAW_ALWAYS;
+    this.updateOnDrawn = null;
+
     this._compiledCondition = null;
     this._priority = 0;
     this._nextDraw = 0;
-    this.redraw = REDRAW_ALWAYS;
   }
 
   compileCondition() {
@@ -64,6 +86,10 @@ export class Storylet {
   }
 
   drawn(currentDraw) {
+    if (this.redraw == REDRAW_NEVER) {
+      this._nextDraw = -1;
+      return;
+    }
     this._nextDraw = currentDraw + this.redraw;
   }
 
@@ -89,10 +115,14 @@ export class Storylet {
       storylet.compileCondition();
     }
     if ("priority" in json) {
-        storylet.priority = json.priority;
+      storylet.priority = json.priority;
     }
-    if ("content" in json)
+    if ("updateOnDrawn" in json) {
+      storylet.updateOnDrawn = json.updateOnDrawn;
+    }
+    if ("content" in json) {
       storylet.content = json.content;
+    }
     return storylet;
 
   }
@@ -101,20 +131,28 @@ export class Storylet {
 
 export class Deck {
 
-  constructor() {
+  constructor(context = {}) {
     this._all = new Map();
     this._drawPile = [];
     this._currentDraw = 0;
+    this._context = context;
   }
 
-  static fromJson(json) {
-    const deck = new Deck();
+  static fromJson(json, context = {}) {
+    const deck = new Deck(context);
     deck.loadJson(json);
     return deck
   }
 
   loadJson(json) {
     for (const item of json) {
+
+      // Initialiser
+      if ("context" in item) {
+        initContext(this._context, item.context);
+        continue;
+      }
+
       const storylet = Storylet.fromJson(item);
       if (this._all.has(storylet.id)) {
         throw new Error(`Duplicate storylet id: '${storylet.id}'.`, item);
@@ -127,8 +165,7 @@ export class Deck {
     this.currentDraw = 0;
   }
 
-  refresh(context, filter=null) {
-
+  refresh(filter=null) {
     this._drawPile = [];
     const priorityAvailable = new Map();
     const toProcess = [...this._all.values()];
@@ -147,12 +184,12 @@ export class Deck {
         }
       }
 
-      if (!storylet.checkCondition(context)) {
+      if (!storylet.checkCondition(this._context)) {
         //console.log(`Storylet '${storylet.id}': condition '${storylet.condition}' didn't pass.`);
         continue;
       }
 
-      let priority = storylet.calcCurrentPriority(context);
+      let priority = storylet.calcCurrentPriority(this._context);
       if (!priorityAvailable.has(priority))
         priorityAvailable.set(priority, []);
       priorityAvailable.get(priority).push(storylet);
@@ -172,6 +209,8 @@ export class Deck {
       return null;
 
     const storylet = this._drawPile.shift();
+    if (storylet.updateOnDrawn)
+      updateContext(this._context, storylet.updateOnDrawn);
     storylet.drawn(this._currentDraw);
     this._currentDraw++;
     return storylet;
