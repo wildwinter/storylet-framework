@@ -6,6 +6,16 @@
         }
     },
     {
+        "id": "thug",
+        "condition": "street_wealth<=0",
+        "content": { "title": "Meeting with Thug" , "tags":["threat"]}
+    },
+    {
+        "id": "pickpocket",
+        "condition": "street_wealth>=0",
+        "content": { "title": "Meeting with Pickpocket" , "tags":["threat"]}
+    },
+    {
         "id": "worker",
         "condition": "street_wealth<=0",
         "content": { "title": "Meeting with Worker" }
@@ -19,7 +29,8 @@
         "id": "banker",
         "condition": "street_wealth>=0",
         "content": { 
-            "title": "Meeting with Banker"
+            "title": "Meeting with Banker",
+            "tags": ["wealth"]
         }
     },
     {
@@ -28,13 +39,14 @@
         "condition": "street_wealth>=0",
         "updateOnDrawn": {"noble_storyline":1},
         "content": { 
-            "title": "Meeting with Noble"
+            "title": "Meeting with Noble",
+            "tags": ["wealth"]
         }
     },
     {
         "id": "noble_castle_street",
         "condition": "street_id=='castlestreet' and noble_storyline>0",
         "updateOnDrawn": {"noble_storyline":"noble_storyline+1"},
-        "content": { "title": "Another Meeting with Noble - on Castle Street" }
+        "content": { "title": "Another Meeting with Noble - on Castle Street", "tags": ["wealth"]}
     }
 ]

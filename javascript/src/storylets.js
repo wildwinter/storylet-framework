@@ -70,9 +70,11 @@ export class Storylet {
 
   calcCurrentPriority(context) {
     let workingPriority = + evalExpression(this._priority, context);
-    if (USE_SPECIFICITY && this._compiledCondition!=null) {
+    if (USE_SPECIFICITY) {
       workingPriority = workingPriority*100;
-      workingPriority += this._compiledCondition.specificity;
+      if (this._compiledCondition!=null) {
+        workingPriority += this._compiledCondition.specificity;
+      }
     }
     return workingPriority;
   }

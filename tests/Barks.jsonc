@@ -1,0 +1,81 @@
+[
+    {
+      "id": "welcome",
+      "priority": 10,
+      "redraw": "never",
+      "content": { "comment":"Welcome to the city!" }
+    },
+    {
+      "id": "warn1",
+      "priority": 2,
+      "condition": "encounter_tag('threat')",
+      "content": { "comment":"Look out, this could be trouble." }
+    },
+    {
+      "id": "warn2",
+      "priority": 2,
+      "condition": "encounter_tag('threat')",
+      "content": { "comment":"Careful!" }
+    },
+    {
+      "id": "warn3",
+      "priority": 2,
+      "condition": "encounter_tag('threat')",
+      "content": { "comment":"Uh-oh." }
+    },
+    {
+      "id": "warn4",
+      "priority": 2,
+      "condition": "encounter_tag('threat')",
+      "content": { "comment":"This could be bad." }
+    },
+    {
+      "id": "commentOnRich1",
+      "priority": 1,
+      "redraw": 4,
+      "condition": "encounter_tag('wealth')",
+      "content": { "comment":"Ah, it's a fat cat!" }
+    },
+    {
+      "id": "commentOnRich2",
+      "priority": 1,
+      "redraw": 4,
+      "condition": "encounter_tag('wealth')",
+      "content": { "comment":"Why do we spend time around these people?" }
+    },
+    {
+      "id": "commentMarket",
+      "priority": 1,
+      "redraw": "never",
+      "condition": "street_id=='market'",
+      "content": { "comment":"I like the market - always buzzing with activity." }
+    },
+    {
+      "id": "commentPoorPlace1",
+      "priority": 0,
+      "redraw": 4,
+      "condition": "street_wealth<0",
+      "content": { "comment":"This is my kind of place." }
+    },
+    {
+      "id": "commentPoorPlace2",
+      "priority": 0,
+      "redraw": 4,
+      "condition": "street_wealth<0",
+      "content": { "comment":"Not much has changed since I grew up - no-one has any money." }
+    },
+    {
+      "id": "commentRichPlace1",
+      "priority": 0,
+      "redraw": 4,
+      "condition": "street_wealth>0",
+      "content": { "comment":"Wow, this place is so clean. It's weird." }
+    },
+    {
+      "id": "commentRichPlace2",
+      "priority": 0,
+      "redraw": 4,
+      "condition": "street_wealth>0",
+      "content": { "comment":"Just look at the money spent on this place." }
+    }
+  ]

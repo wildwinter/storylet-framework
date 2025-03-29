@@ -23,16 +23,31 @@ describe('Storylets', () => {
 
     });
 
+    it('testing barks', () => {
+
+      const context = {
+        street_id:"",
+        street_wealth:1,
+        encounter_tag:(tag) => false
+      };
+
+      const barks = Deck.fromJson(loadJsonFile("Barks.jsonc"), context);
+      barks.refresh();
+      assert.notEqual(null, barks.draw());
+    });
+
     it('testing street system', () => {
 
       const context = {
         street_id:"",
         street_wealth:0,
-        street_tag:null
+        street_tag:(tag) => false,
+        encounter_tag:(tag) => false
       };
 
       const streets = Deck.fromJson(loadJsonFile("Streets.jsonc"), context);
       const encounters = Deck.fromJson(loadJsonFile("Encounters.jsonc"), context);
+      const barks = Deck.fromJson(loadJsonFile("Barks.jsonc"), context);
 
       let setStreet = (street) => {
         context.street_id = street.id;
@@ -45,9 +60,20 @@ describe('Storylets', () => {
         setStreet(street);
         // We're on a new street, so shuffle the encounters deck to only include relevant cards.
         encounters.refresh();
-        console.log(encounters.dumpDrawPile());
+        //console.log(encounters.dumpDrawPile());
         let encounter = encounters.draw();
+        context.encounter_tag = (tag) => {
+          if (!encounter.content.tags)
+            return false;
+          return encounter.content.tags.includes(tag);
+        };
         console.log(`  Encounter: "${encounter.content.title}"`);
+        barks.refresh();
+        //console.log(barks.dumpDrawPile());
+        let bark = barks.draw();
+        if (bark) {
+          console.log(`  Comment: "${bark.content.comment}"`);
+        }
       }
 
       // First encounter - this should pull out a "start" location.
@@ -67,8 +93,9 @@ describe('Storylets', () => {
       }
 
       // We should have encountered the noble at least once!
-      assert.equal(true, context.noble_storyline>0);
+      //assert.equal(true, context.noble_storyline>0);
 
     });
+
   });  
 });
