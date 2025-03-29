@@ -8,7 +8,7 @@ import {Deck} from "../src/storylets.js";
 describe('Storylets', () => {
 
   describe('SimpleStreets', () => {
-    it('should match', () => {
+    it('basic calls', () => {
 
       const json = loadJsonFile("Streets.jsonc");
       const deck = Deck.fromJson(json);
@@ -16,14 +16,14 @@ describe('Storylets', () => {
       deck.refresh();
       let card = deck.draw();
 
-      assert.equal(true, card.id=="docks");
+      assert.notEqual(null, card);
 
       card = deck.draw();
-      assert.equal(true, card.id!="docks");
+      assert.notEqual(null, card);
 
     });
 
-    it('should match', () => {
+    it('testing street system', () => {
 
       const context = {
         street_id:"",
@@ -38,23 +38,36 @@ describe('Storylets', () => {
         context.street_id = street.id;
         context.street_wealth = street.content.wealth;
         context.street_tag = (tag) => {return street.content.tags.includes(tag)};
-        console.log(`Location:"${street.content.title}"`);
+        console.log(`Location: "${street.content.title}"`);
       };
 
-      let doEncounter = (encounter) => {
-        console.log("  ", encounter.content.title);
+      let doEncounter = (street) => {
+        setStreet(street);
+        // We're on a new street, so shuffle the encounters deck to only include relevant cards.
+        encounters.refresh();
+        console.log(encounters.dumpDrawPile());
+        let encounter = encounters.draw();
+        console.log(`  Encounter: "${encounter.content.title}"`);
       }
 
+      // First encounter - this should pull out a "start" location.
+      streets.refresh((street)=>{return street.content.tags.includes("start")});
+      let street = streets.draw();
+      doEncounter(street);
+
+      assert.equal(true, street.id=="docks"||street.id=="market"||street.id=="bridge");
+
+      // Reshuffle the deck so that all streets are fair game.
       streets.refresh();
 
-      let street;
-      for (let i=0;i<5;i++) {
+      // Walk through the street deck and pull an encounter for each location
+      for (let i=0;i<11;i++) {
           street = streets.draw();
-          setStreet(street);
-          encounters.refresh();
-          let encounter = encounters.draw();
-          doEncounter(encounter);
+          doEncounter(street);
       }
+
+      // We should have encountered the noble at least once!
+      assert.equal(true, context.noble_storyline>0);
 
     });
   });  

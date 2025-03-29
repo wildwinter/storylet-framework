@@ -1,6 +1,5 @@
 Debugging
 Alt to async
-Init context vars in json?
 
 DONE
 ----
@@ -11,3 +10,4 @@ Simple types don't run
 Setting as array
 Strip comments out of JSON
 Repeat (never, always, draw_count)
+Init context vars in json?

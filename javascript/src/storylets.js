@@ -204,6 +204,14 @@ export class Deck {
 
   }
 
+  dumpDrawPile() {
+    let ids = [];
+    for (const storylet of this._drawPile) {
+      ids.push(storylet.id);
+    }
+    return ids.join(',');
+  }
+
   draw() {
     if (this._drawPile.length==0)
       return null;

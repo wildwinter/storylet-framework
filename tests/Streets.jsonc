@@ -1,9 +1,9 @@
 [
     {
       "id": "docks",
-      "priority": 10,
+      "priority": 0,
       "condition": "",
-      "content": { "title": "The Docks", "wealth":-1, "tags":["water"] }
+      "content": { "title": "The Docks", "wealth":-1, "tags":["water", "start"] }
     },
     {
       "id": "yards",
@@ -27,7 +27,7 @@
       "id": "market",
       "priority": 0,
       "condition": "",
-      "content": { "title": "The Market", "wealth":0, "tags":["shops"] }
+      "content": { "title": "The Market", "wealth":0, "tags":["shops", "start"]}
     },
     {
       "id": "mainstreet",
@@ -45,7 +45,7 @@
       "id": "bridge",
       "priority": 0,
       "condition": "",
-      "content": { "title": "Old Bridge", "wealth":0, "tags":["water"] }
+      "content": { "title": "Old Bridge", "wealth":0, "tags":["water", "start"] }
     },
     {
       "id": "park",
@@ -57,7 +57,7 @@
       "id": "cathedralyard",
       "priority": 0,
       "condition": "",
-      "content": { "title": "Cathedral Yard", "wealth":2, "tags":[] }
+      "content": { "title": "Cathedral Yard", "wealth":2, "tags":["shops"] }
     },
     {
       "id": "castlestreet",

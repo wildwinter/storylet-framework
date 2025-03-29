@@ -2,7 +2,7 @@
     {
         // This is set up before any storylets in this deck are run.
         "context": {
-            "met_noble": false
+            "noble_storyline": 0
         }
     },
     {
@@ -26,14 +26,15 @@
         "id": "noble",
         "redraw": "never",
         "condition": "street_wealth>=0",
-        "updateOnDrawn": {"met_noble":true},
+        "updateOnDrawn": {"noble_storyline":1},
         "content": { 
             "title": "Meeting with Noble"
         }
     },
     {
         "id": "noble_castle_street",
-        "condition": "street_id=='castlestreet' and met_noble",
-        "content": { "title": "Second Meeting with Noble - on Castle Street" }
+        "condition": "street_id=='castlestreet' and noble_storyline>0",
+        "updateOnDrawn": {"noble_storyline":"noble_storyline+1"},
+        "content": { "title": "Another Meeting with Noble - on Castle Street" }
     }
 ]
