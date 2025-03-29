@@ -14,7 +14,6 @@ describe('Storylets', () => {
       const deck = Deck.fromJson(json);
 
       let card = deck.draw();
-
       assert.notEqual(null, card);
 
       card = deck.draw();
@@ -99,4 +98,32 @@ describe('Storylets', () => {
     });
 
   });  
+
+  describe('AsyncReshuffles', () => {
+    it('basic async', () => {
+
+      const context = {
+        street_id:"",
+        street_wealth:1,
+        encounter_tag:(tag) => false
+      };
+
+      const barks = Deck.fromJson(loadJsonFile("Barks.jsonc"), context, /* reshuffle */ false);
+      barks.reshuffleAsync(()=>console.debug("Async reshuffle complete."));
+
+      while (barks.asyncReshuffleInProgress()) {
+        barks.update();
+      }
+
+      console.log(barks.dumpDrawPile());
+
+      let card = barks.draw();
+      assert.notEqual(null, card);
+
+      card = barks.draw();
+      assert.notEqual(null, card);
+
+    });
+  });
+
 });

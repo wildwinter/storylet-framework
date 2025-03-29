@@ -1,5 +1,4 @@
-Debugging
-Alt to async
+Evaluate dump.
 
 DONE
 ----
@@ -11,3 +10,5 @@ Setting as array
 Strip comments out of JSON
 Repeat (never, always, draw_count)
 Init context vars in json?
+Alt to async
+Debugging
