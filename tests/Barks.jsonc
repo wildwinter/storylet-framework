@@ -8,24 +8,28 @@
     {
       "id": "warn1",
       "priority": 2,
+      "redraw": 2,
       "condition": "encounter_tag('threat')",
       "content": { "comment":"Look out, this could be trouble." }
     },
     {
       "id": "warn2",
       "priority": 2,
+      "redraw": 2,
       "condition": "encounter_tag('threat')",
       "content": { "comment":"Careful!" }
     },
     {
       "id": "warn3",
       "priority": 2,
+      "redraw": 2,
       "condition": "encounter_tag('threat')",
       "content": { "comment":"Uh-oh." }
     },
     {
       "id": "warn4",
       "priority": 2,
+      "redraw": 2,
       "condition": "encounter_tag('threat')",
       "content": { "comment":"This could be bad." }
     },

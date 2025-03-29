@@ -215,6 +215,8 @@ export class Deck {
   }
 
   draw() {
+    this._currentDraw++;
+    
     if (this._drawPile.length==0)
       return null;
 
@@ -222,7 +224,6 @@ export class Deck {
     if (storylet.updateOnDrawn)
       updateContext(this._context, storylet.updateOnDrawn);
     storylet.drawn(this._currentDraw);
-    this._currentDraw++;
     return storylet;
   }
 }

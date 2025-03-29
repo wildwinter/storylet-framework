@@ -86,14 +86,18 @@ describe('Storylets', () => {
       // Reshuffle the deck so that all streets are fair game.
       streets.refresh();
 
+      let path = [];
+
       // Walk through the street deck and pull an encounter for each location
       for (let i=0;i<11;i++) {
           street = streets.draw();
+          path.push(street.id);
           doEncounter(street);
       }
 
       // We should have encountered the noble at least once!
-      //assert.equal(true, context.noble_storyline>0);
+      assert.equal(true, path.includes("market"));
+      assert.equal(true, path.includes("slums"));
 
     });
 
