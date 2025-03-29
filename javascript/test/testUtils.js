@@ -15,6 +15,6 @@ export function loadTestFile(fileName) {
 
 export function loadJsonFile(fileName) {
     let text = loadTestFile(fileName);
-   text = stripJSONComments(text);
+    text = stripJSONComments(text);
     return JSON.parse(text);
 }

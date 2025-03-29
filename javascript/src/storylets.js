@@ -2,13 +2,12 @@
 // Copyright (c) 2025 Ian Thomas
 
 import { ExpressionParser } from '../lib/expression-parser/expressionParser.js';
-import { shuffleArray } from "./utils.js";
+import { shuffleArray, copyObject, updateObject } from "./utils.js";
 
 const expressionParser = new ExpressionParser();
 const USE_SPECIFICITY = true;
 
 export function evalExpression(val, context) {
-
   if (typeof val==="boolean"||typeof val==="number")
     return val;
 
@@ -28,7 +27,7 @@ export function initContext(context, vars) {
 export function updateContext(context, vars) {
   for (const [varName, value] of Object.entries(vars)) {
     const result = evalExpression(value, context);
-    console.log(`Setting ${varName} to ${result}`);
+    //console.log(`Setting ${varName} to ${result}`);
     if (!(varName in context)) {
       throw new Error(`Context var: '${varName}' undefined.`);
     }
@@ -95,15 +94,19 @@ export class Storylet {
     this._nextDraw = currentDraw + this.redraw;
   }
 
-  static fromJson(json) {
+  static fromJson(json, defaults) {
 
     if (!("id" in json))
       throw new Error("No 'id' property in the storylet JSON.", json);
 
-    const storylet = new Storylet(json.id);
+    let config = defaults;
+    updateObject(config, json);
+    //console.log("Parsing:", json.id, config);
 
-    if ("redraw" in json) {
-      let val = json.redraw;
+    const storylet = new Storylet(config.id);
+
+    if ("redraw" in config) {
+      let val = config.redraw;
       if (val=="always")
         storylet.redraw = REDRAW_ALWAYS;
       else if (val=="never")
@@ -112,21 +115,20 @@ export class Storylet {
         storylet.redraw = parseInt(val);
     }
 
-    if ("condition" in json) {
-      storylet.condition = json.condition;
+    if ("condition" in config) {
+      storylet.condition = config.condition;
       storylet.compileCondition();
     }
-    if ("priority" in json) {
-      storylet.priority = json.priority;
+    if ("priority" in config) {
+      storylet.priority = config.priority;
     }
-    if ("updateOnDrawn" in json) {
-      storylet.updateOnDrawn = json.updateOnDrawn;
+    if ("updateOnDrawn" in config) {
+      storylet.updateOnDrawn = config.updateOnDrawn;
     }
-    if ("content" in json) {
-      storylet.content = json.content;
+    if ("content" in config) {
+      storylet.content = config.content;
     }
     return storylet;
-
   }
 
 }
@@ -147,20 +149,49 @@ export class Deck {
   }
 
   loadJson(json) {
-    for (const item of json) {
+    let defaults = {};
+    this._readPacketFromJson(json, defaults);
+  }
 
-      // Initialiser
-      if ("context" in item) {
-        initContext(this._context, item.context);
+  _readPacketFromJson(json, defaults) {
+
+    if ("context" in json) {
+      initContext(this._context, json.context);
+    }
+
+    if ("defaults" in json) {
+      for (const [varName, value] of Object.entries(json.defaults)) {
+        defaults[varName] = value;
+      }
+    }
+
+    if ("storylets" in json) {
+      this._readStoryletsFromJson(json.storylets, copyObject(defaults));
+    }
+  }
+
+  _readStoryletsFromJson(json, defaults) {
+
+    for (const item of json) {
+      
+      // Is this a storylet? Or is it a packet?
+      if ("storylets" in item||"defaults" in item||"context" in item) {
+        this._readPacketFromJson(item, defaults);
         continue;
       }
 
-      const storylet = Storylet.fromJson(item);
+      // Read as storylet.
+      if (!("id" in item)) {
+        throw new Error(`Json item is not storylet or packet`, item);
+      }
+
+      const storylet = Storylet.fromJson(item, defaults);
       if (this._all.has(storylet.id)) {
         throw new Error(`Duplicate storylet id: '${storylet.id}'.`, item);
       }
       this._all.set(storylet.id, storylet);
     }
+
   }
 
   reset() {
@@ -216,7 +247,7 @@ export class Deck {
 
   draw() {
     this._currentDraw++;
-    
+
     if (this._drawPile.length==0)
       return null;
 

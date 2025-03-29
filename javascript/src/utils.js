@@ -8,3 +8,13 @@ export function shuffleArray(array) {
   }
   return array;
 }
+
+export function copyObject(original) {
+  return structuredClone(original);
+}
+
+export function updateObject(original, additions) {
+  for (const [varName, value] of Object.entries(additions)) {
+    original[varName] = value;
+  }
+}

@@ -1,52 +1,53 @@
-[
-    {
-        // This is set up before any storylets in this deck are run.
-        "context": {
-            "noble_storyline": 0
+{
+    // This is set up before any storylets in this deck are run.
+    "context": {
+        "noble_storyline": 0
+    },
+    "storylets":
+    [
+        {
+            "id": "thug",
+            "condition": "street_wealth<=0",
+            "content": { "title": "Meeting with Thug" , "tags":["threat"]}
+        },
+        {
+            "id": "pickpocket",
+            "condition": "street_wealth>=0",
+            "content": { "title": "Meeting with Pickpocket" , "tags":["threat"]}
+        },
+        {
+            "id": "worker",
+            "condition": "street_wealth<=0",
+            "content": { "title": "Meeting with Worker" }
+        },
+        {
+            "id": "fruit_seller",
+            "condition": "street_tag('shops')",
+            "content": { "title": "Meeting with Fruit Seller" }
+        },
+        {
+            "id": "banker",
+            "condition": "street_wealth>=0",
+            "content": { 
+                "title": "Meeting with Banker",
+                "tags": ["wealth"]
+            }
+        },
+        {
+            "id": "noble",
+            "redraw": "never",
+            "condition": "street_wealth>=0",
+            "updateOnDrawn": {"noble_storyline":1},
+            "content": { 
+                "title": "Meeting with Noble",
+                "tags": ["wealth"]
+            }
+        },
+        {
+            "id": "noble_castle_street",
+            "condition": "street_id=='castlestreet' and noble_storyline>0",
+            "updateOnDrawn": {"noble_storyline":"noble_storyline+1"},
+            "content": { "title": "Another Meeting with Noble - on Castle Street", "tags": ["wealth"]}
         }
-    },
-    {
-        "id": "thug",
-        "condition": "street_wealth<=0",
-        "content": { "title": "Meeting with Thug" , "tags":["threat"]}
-    },
-    {
-        "id": "pickpocket",
-        "condition": "street_wealth>=0",
-        "content": { "title": "Meeting with Pickpocket" , "tags":["threat"]}
-    },
-    {
-        "id": "worker",
-        "condition": "street_wealth<=0",
-        "content": { "title": "Meeting with Worker" }
-    },
-    {
-        "id": "fruit_seller",
-        "condition": "street_tag('shops')",
-        "content": { "title": "Meeting with Fruit Seller" }
-    },
-    {
-        "id": "banker",
-        "condition": "street_wealth>=0",
-        "content": { 
-            "title": "Meeting with Banker",
-            "tags": ["wealth"]
-        }
-    },
-    {
-        "id": "noble",
-        "redraw": "never",
-        "condition": "street_wealth>=0",
-        "updateOnDrawn": {"noble_storyline":1},
-        "content": { 
-            "title": "Meeting with Noble",
-            "tags": ["wealth"]
-        }
-    },
-    {
-        "id": "noble_castle_street",
-        "condition": "street_id=='castlestreet' and noble_storyline>0",
-        "updateOnDrawn": {"noble_storyline":"noble_storyline+1"},
-        "content": { "title": "Another Meeting with Noble - on Castle Street", "tags": ["wealth"]}
-    }
-]
+    ]
+}

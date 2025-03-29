@@ -33,6 +33,7 @@ describe('Storylets', () => {
 
       const barks = Deck.fromJson(loadJsonFile("Barks.jsonc"), context);
       barks.refresh();
+      //console.log(barks.dumpDrawPile());
       assert.notEqual(null, barks.draw());
     });
 
