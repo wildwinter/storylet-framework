@@ -213,7 +213,7 @@ export class Deck {
     // If true, storylet.priority is still used as the base, but
     // within priorities more complex conditions (thus more specific) are
     // treated as higher priority
-    this.useSpecificity = true;
+    this.useSpecificity = false;
 
     // How many storylets to process on each call to update(), if using async reshuffles?
     this.asyncReshuffleCount = 10;
