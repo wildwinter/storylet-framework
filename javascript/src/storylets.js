@@ -8,18 +8,22 @@ const expressionParser = new ExpressionParser();
 
 // Use the ExpressionParser to evaluate an expression
 // Unless it's a simple bool or number, in which case just use that.
-export function evalExpression(val, context) {
+// dump_eval will fill an array with evaluation debug steps
+export function evalExpression(val, context, dump_eval = null) {
   if (typeof val==="boolean"||typeof val==="number")
     return val;
 
   const expression = expressionParser.parse(val);
-  return expression.evaluate(context);
+  return expression.evaluate(context, dump_eval);
 }
 
 // Evaluate and copy any new entries in 'properties' into the context
-export function initContext(context, properties) {
+// dump_eval will fill an array with evaluation debug steps
+export function initContext(context, properties, dump_eval = null) {
   for (const [propName, expression] of Object.entries(properties)) {
-    const result = evalExpression(expression, context);
+    if (dump_eval)
+      dump_eval.push(`InitContext: Evaluating ${propName} = ${expression}`);
+    const result = evalExpression(expression, context, dump_eval);
     if (propName in context)
       throw new Error(`Trying to initialise propert '${propName}' in context when it already exists.`)
     context[propName] = result;
@@ -27,8 +31,11 @@ export function initContext(context, properties) {
 }
 
 // Evaluate any entries in updates and apply them to the context, but they must already exist
-export function updateContext(context, updates) {
+// dump_eval will fill an array with evaluation debug steps
+export function updateContext(context, updates, dump_eval = null) {
   for (const [propName, expression] of Object.entries(updates)) {
+    if (dump_eval)
+      dump_eval.push(`UpdateContext: Evaluating ${propName} = ${expression}`);
     const result = evalExpression(expression, context);
     //console.log(`Setting ${varName} to ${result}`);
     if (!(propName in context)) {
@@ -96,10 +103,13 @@ export class Storylet {
   }
 
   // Evaluate condition using current context. Return boolean. If not condition, returns true.
-  checkCondition(context) {
+  checkCondition(context, dump_eval) {
     if (!this._condition)
       return true;
-    return this._condition.evaluate(context);
+    if (dump_eval) {
+      dump_eval.push(`Evaluating condition for ${this.id}`);
+    }
+    return this._condition.evaluate(context, dump_eval);
   }
 
   // Set priority to a fixed number, or to an expression which will be precompiled.
@@ -113,14 +123,17 @@ export class Storylet {
 
   // Evaluate priority using current context.
   // If useSpecifity is true, will produce a higher number if the storylet's expression is more complex.
-  calcCurrentPriority(context, useSpecificity=true) {
+  calcCurrentPriority(context, useSpecificity=true, dump_eval = null) {
 
     // Internally, if we're using specificity, everything is 100* higher so we can stick with an int.
     let workingPriority = 0;
     if (typeof this._priority==="number") {
       workingPriority = this._priority;
     } else {
-      workingPriority = +this._priority.evaluate(context);
+      if (dump_eval) {
+        dump_eval.push(`Evaluating priority for ${this.id}`);
+      }
+      workingPriority = +this._priority.evaluate(context, dump_eval);
     }
 
     if (useSpecificity) {
@@ -219,28 +232,30 @@ export class Deck {
     this._context = context;
 
     // Used to deal with in-progress reshuffles.
-    this._reshuffleState = {callback:null, toProcess:[], filter:null, priorityMap:null};
+    this._reshuffleState = {callback:null, toProcess:[], filter:null, priorityMap:null, dump_eval:null};
   }
 
   // Parse from json
   // reshuffle automatically reshuffles before returning.
-  static fromJson(json, context = {}, reshuffle = true) {
+  // dump_eval will fill an array with evaluation debug steps
+  static fromJson(json, context = {}, reshuffle = true, dump_eval = null) {
     const deck = new Deck(context);
-    deck.loadJson(json);
+    deck.loadJson(json, dump_eval);
     if (reshuffle)
-      deck.reshuffle();
+      deck.reshuffle(null, dump_eval);
     return deck
   }
 
-  loadJson(json) {
-    this._readPacketFromJson(json, {});
+  // dump_eval will fill an array with evaluation debug steps
+  loadJson(json, dump_eval = null) {
+    this._readPacketFromJson(json, {}, dump_eval);
   }
 
   // Read a packet of storylets, inheriting the given defaults
-  _readPacketFromJson(json, defaults) {
+  _readPacketFromJson(json, defaults, dump_eval = null) {
 
     if ("context" in json) {
-      initContext(this._context, json.context);
+      initContext(this._context, json.context, dump_eval);
     }
 
     if ("defaults" in json) {
@@ -250,20 +265,20 @@ export class Deck {
     }
 
     if ("storylets" in json) {
-      this._readStoryletsFromJson(json.storylets, copyObject(defaults));
+      this._readStoryletsFromJson(json.storylets, copyObject(defaults), dump_eval);
     }
   }
 
   // Read an array of storylets, inheriting the given defaults. If any storylets is actually a packet,
   //   read that packet.
-
-  _readStoryletsFromJson(json, defaults) {
+  // dump_eval will fill an array with evaluation debug steps
+  _readStoryletsFromJson(json, defaults, dump_eval=null) {
 
     for (const item of json) {
     
       // Is this a storylet? Or is it a packet?
       if ("storylets" in item||"defaults" in item||"context" in item) {
-        this._readPacketFromJson(item, defaults);
+        this._readPacketFromJson(item, defaults, dump_eval);
         continue;
       }
 
@@ -278,6 +293,9 @@ export class Deck {
       }
 
       this._all.set(storylet.id, storylet);
+      if (dump_eval) {
+        dump_eval.push(`Added storylet '${storylet.id}'`);
+      }
     }
 
   }
@@ -294,28 +312,30 @@ export class Deck {
   // and anything which fails the optionally supplied filter.
   // The draw pile will be sorted by priority (and specificity where relevant)
   // Might be slow if you have a lot of storylets - consider reshuffleAsync instead.
-  reshuffle(filter=null) {
+  // dump_eval will fill an array with evaluation debug steps
+  reshuffle(filter=null, dump_eval = null) {
 
     if (this.asyncReshuffleInProgress()) {
       throw new Error("Async reshuffle in progress, can't call reshuffle()");
     }
 
-    this._reshufflePrep(filter);
+    this._reshufflePrep(filter, dump_eval);
     // Reshuffle everything at once.
     this._reshuffleDoChunk(this._reshuffleState.toProcess.length);
     this._reshuffleFinalise();
   }
 
-    // Use this to kick off an async reshuffle. Now you need to call update() periodically (e.g. every frame)
+  // Use this to kick off an async reshuffle. Now you need to call update() periodically (e.g. every frame)
   // When the reshuffle is complete, the callback will be called.
-  reshuffleAsync(callback, filter=null) {
+  // dump_eval will fill an array with evaluation debug steps
+  reshuffleAsync(callback, filter=null, dump_eval = null) {
 
     if (this.asyncReshuffleInProgress()) {
       throw new Error("Async reshuffle in progress, can't call reshuffleAsync()");
     }
 
     this._reshuffleState.callback = callback;
-    this._reshufflePrep(filter);
+    this._reshufflePrep(filter, dump_eval);
 
   }
 
@@ -336,9 +356,10 @@ export class Deck {
 
   }
 
-  _reshufflePrep(filter) {
+  _reshufflePrep(filter, dump_eval=null) {
     // Empty the draw pile
     this._drawPile = [];
+    this._reshuffleState.dump_eval = dump_eval;
     this._reshuffleState.filter = filter;
     // Temp map to hold lists by priority
     this._reshuffleState.priorityMap = new Map();
@@ -370,14 +391,14 @@ export class Deck {
         }
       }
 
-      if (!storylet.checkCondition(this._context)) {
+      if (!storylet.checkCondition(this._context, this._reshuffleState.dump_eval)) {
         // Storylet fails the condition - skip
         //console.log(`Storylet '${storylet.id}': condition '${storylet.condition}' didn't pass.`);
         continue;
       }
 
       // Get the current priority for the storylet
-      let priority = storylet.calcCurrentPriority(this._context, this.useSpecificity);
+      let priority = storylet.calcCurrentPriority(this._context, this.useSpecificity, this._reshuffleState.dump_eval);
       
       if (!this._reshuffleState.priorityMap.has(priority)) {
         // Does a priority list for this priority value exist in the temp map? If not, make it
@@ -406,6 +427,7 @@ export class Deck {
     this._reshuffleState.filter = null;
     const callback = this._reshuffleState.callback;
     this._reshuffleState.callback = null;
+    this._reshuffleState.dump_eval = null;
     if (callback) {
       callback();
     }

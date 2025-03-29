@@ -10,14 +10,18 @@ describe('Storylets', () => {
   describe('SimpleStreets', () => {
     it('basic calls', () => {
 
+      let dump_eval = [];
+
       const json = loadJsonFile("Streets.jsonc");
-      const deck = Deck.fromJson(json);
+      const deck = Deck.fromJson(json, {}, true, dump_eval);
 
       let card = deck.draw();
       assert.notEqual(null, card);
 
       card = deck.draw();
       assert.notEqual(null, card);
+
+      console.log(dump_eval.join('\n'));
 
     });
 
@@ -102,6 +106,8 @@ describe('Storylets', () => {
   describe('AsyncReshuffles', () => {
     it('basic async', () => {
 
+      let dump_eval = [];
+
       const context = {
         street_id:"",
         street_wealth:1,
@@ -109,7 +115,7 @@ describe('Storylets', () => {
       };
 
       const barks = Deck.fromJson(loadJsonFile("Barks.jsonc"), context, /* reshuffle */ false);
-      barks.reshuffleAsync(()=>console.debug("Async reshuffle complete."));
+      barks.reshuffleAsync(()=>console.debug("Async reshuffle complete."),null,dump_eval);
 
       while (barks.asyncReshuffleInProgress()) {
         barks.update();
@@ -122,6 +128,8 @@ describe('Storylets', () => {
 
       card = barks.draw();
       assert.notEqual(null, card);
+
+      console.log(dump_eval.join('\n'));
 
     });
   });
