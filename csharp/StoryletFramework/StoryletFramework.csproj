@@ -15,4 +15,16 @@
 
   </PropertyGroup>
 
+  <ItemGroup>
+    <Reference Include="ExpressionParser">
+      <HintPath>../lib/expression-parser/ExpressionParser.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="../lib/expression-parser/ExpressionParser.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
