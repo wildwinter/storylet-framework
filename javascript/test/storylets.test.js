@@ -97,7 +97,6 @@ describe('Storylets', () => {
           doEncounter(street);
       }
 
-      // We should have encountered the noble at least once!
       assert.equal(true, path.includes("market")||path.includes("slums")||path.includes("bridge"));
     });
 

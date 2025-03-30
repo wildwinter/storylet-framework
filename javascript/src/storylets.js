@@ -36,7 +36,7 @@ export function updateContext(context, updates, dump_eval = null) {
   for (const [propName, expression] of Object.entries(updates)) {
     if (dump_eval)
       dump_eval.push(`UpdateContext: Evaluating ${propName} = ${expression}`);
-    const result = evalExpression(expression, context);
+    const result = evalExpression(expression, context, dump_eval);
     //console.log(`Setting ${varName} to ${result}`);
     if (!(propName in context)) {
       throw new Error(`Context var: '${propName}' undefined.`);
@@ -49,11 +49,18 @@ export function updateContext(context, updates, dump_eval = null) {
 export function dumpContext(context) {
   let out = [];
   for (const [propName, expression] of Object.entries(context)) {
-    const result = evalExpression(expression, context);
-    out.push(`${propName} = ${result}`);
+    if (typeof expression === 'function') {
+      out.push(`${propName} = <function>`);
+    }
+    else if (typeof expression==="boolean"||typeof expression==="number"||typeof expression==="string") {
+      const result = evalExpression(expression, context);
+      out.push(`${propName} = ${result}`);
+    }
   }
   return out.join('\n');
 }
+
+
 
 // Meta-values in Redraw.
 const REDRAW_ALWAYS = 0;
