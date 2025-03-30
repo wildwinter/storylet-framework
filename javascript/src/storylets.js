@@ -370,8 +370,8 @@ export class Deck {
     // Result will be - higher priorities will be in the pile at the front, and we go down from there.
     for (const priority of sortedPriorities) {
       const bucket = this._reshuffleState.priorityMap.get(priority);
-      const shuffledBucket = shuffleArray(bucket);
-      this._drawPile.push(...shuffledBucket);
+      shuffleArray(bucket);
+      this._drawPile.push(...bucket);
     }
 
     this._reshuffleState.priorityMap = null;

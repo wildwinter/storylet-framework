@@ -301,8 +301,8 @@ class Deck:
         # Result will be - higher priorities will be in the pile at the front, and we go down from there.
         for priority in sorted_priorities:
             bucket = self._reshuffle_state["priority_map"][priority]
-            shuffled_bucket = shuffle_array(bucket)
-            self._draw_pile.extend(shuffled_bucket)
+            shuffle_array(bucket)
+            self._draw_pile.extend(bucket)
 
         self._reshuffle_state["priority_map"] = None
         self._reshuffle_state["to_process"] = []

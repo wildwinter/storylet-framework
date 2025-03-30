@@ -1,26 +1,26 @@
 // This file is part of an MIT-licensed project: see LICENSE file or README.md for details.
 // Copyright (c) 2025 Ian Thomas
 
-namespace StoryletFramework.Tests;
 using StoryletFramework;
+
+namespace StoryletFramework.Tests;
 
 public class StoryletsTest
 {
     [Fact]
     public void Simple()
     {
-        var deck = new Deck();
+        var dumpEval = new List<string>();
 
-        string testFileContent = TestUtils.LoadTestFile("Barks.jsonc");
+        var json = TestUtils.LoadJsonFile("Streets.jsonc");
+        var deck = Deck.FromJson(json, new Dictionary<string, object>(), true, dumpEval);
 
-        var context = new Dictionary<string, object>
-        {
-            { "get_name", new Func<string>(() => "fred") },
-            { "counter", 1 }
-        };
+        var card = deck.Draw();
+        Assert.NotNull(card);
 
-        //var result = expression.Evaluate(context);
+        card = deck.Draw();
+        Assert.NotNull(card);
 
-//        Assert.Equal(true, result);
+        Console.WriteLine(string.Join('\n', dumpEval));
     }
 }

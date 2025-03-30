@@ -6,34 +6,31 @@
 using System;
 using System.Collections.Generic;
 
-namespace StoryletFramework
+namespace StoryletFramework;
+
+public static class Utils
 {
-    public static class Utils
+    // Shuffle an array in place
+    public static void ShuffleArray<T>(List<T> array)
     {
-        // Shuffle an array in place
-        public static void ShuffleArray<T>(List<T> array)
+        Random random = new Random();
+        for (int i = array.Count - 1; i > 0; i--)
         {
-            Random random = new Random();
-            for (int i = array.Count - 1; i > 0; i--)
-            {
-                int j = random.Next(i + 1);
-                (array[i], array[j]) = (array[j], array[i]);
-            }
+            int j = random.Next(i + 1);
+            (array[i], array[j]) = (array[j], array[i]);
         }
+    }
 
-        // Create a deep copy of an object (assuming it's a Dictionary<string, object>)
-        public static Dictionary<string, object> CopyObject(Dictionary<string, object> original)
-        {
-            return new Dictionary<string, object>(original);
-        }
+    public static Dictionary<string, object> CopyObject(Dictionary<string, object> original)
+    {
+        return new Dictionary<string, object>(original);
+    }
 
-        // Update a dictionary with values from another dictionary
-        public static void UpdateObject(Dictionary<string, object> original, Dictionary<string, object> additions)
+    public static void UpdateObject(Dictionary<string, object> original, Dictionary<string, object> additions)
+    {
+        foreach (var kvp in additions)
         {
-            foreach (var kvp in additions)
-            {
-                original[kvp.Key] = kvp.Value;
-            }
+            original[kvp.Key] = kvp.Value;
         }
     }
 }
