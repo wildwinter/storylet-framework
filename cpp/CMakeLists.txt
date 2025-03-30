@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-project(ExpressionParser LANGUAGES CXX)
+project(StoryletFramework LANGUAGES CXX)
 
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 20)
@@ -25,15 +25,13 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 install(TARGETS ${PROJECT_NAME}
     LIBRARY DESTINATION lib  # For shared libraries
     ARCHIVE DESTINATION lib  # For static libraries
-    PUBLIC_HEADER DESTINATION include/expression_parser
+    PUBLIC_HEADER DESTINATION include/storylet_framework
 )
 
 # Add a test executable
 add_executable(tests 
     test/catch_amalgamated.cpp
-    test/test_parser.cpp
-    test/test_writer.cpp
-    test/test_utils.cpp)
+    test/test_storylets.cpp)
 
 # Link the library to the test executable
 target_link_libraries(tests PRIVATE StoryletFramework)
