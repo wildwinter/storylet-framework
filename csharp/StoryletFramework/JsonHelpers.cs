@@ -25,12 +25,7 @@ public static class JsonHelpers
         switch (element.ValueKind)
         {
             case JsonValueKind.Array:
-                var list = new List<object>();
-                foreach (var item in element.EnumerateArray())
-                {
-                    list.Add(ConvertJsonElement(item));
-                }
-                return list;
+                return ConvertJsonArray(element);
 
             case JsonValueKind.String:
                 return element.GetString()!;
@@ -55,6 +50,32 @@ public static class JsonHelpers
             default:
                 throw new InvalidDataException($"Unsupported JSON value kind: {element.ValueKind}");
         }
+    }
+
+    private static object ConvertJsonArray(JsonElement element)
+    {
+        var items = new List<object>();
+        foreach (var item in element.EnumerateArray())
+        {
+            items.Add(ConvertJsonElement(item));
+        }
+
+        // Determine the type of the first element to return a more specific list type
+        if (items.Count > 0)
+        {
+            var firstItem = items[0];
+            if (firstItem is string)
+                return items.Cast<string>().ToList();
+            if (firstItem is int)
+                return items.Cast<int>().ToList();
+            if (firstItem is double)
+                return items.Cast<double>().ToList();
+            if (firstItem is Dictionary<string, object>)
+                return items.Cast<Dictionary<string, object>>().ToList();
+        }
+
+        // Default to List<object> if no specific type can be determined
+        return items;
     }
 
     private static Dictionary<string, object> ConvertJsonElementToDictionary(JsonElement element)

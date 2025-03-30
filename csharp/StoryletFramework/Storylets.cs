@@ -7,7 +7,6 @@ using System;
 using System.Collections.Generic;
 using ExpressionParser;
 using System.Text.Json;
-using System.Linq;
 
 namespace StoryletFramework
 {
@@ -228,8 +227,7 @@ namespace StoryletFramework
 
             if (jsonObj.ContainsKey("storylets"))
             {
-                var storyletListObjects = jsonObj["storylets"] as List<object>;
-                var storyletList = storyletListObjects?.OfType<Dictionary<string, object>>().ToList();
+                var storyletList = jsonObj["storylets"] as List<Dictionary<string, object>>;
                 if (storyletList == null)
                     throw new ArgumentException("Storylets property is not a list.");
                 ReadStoryletsFromJson(storyletList, Utils.CopyObject(defaults), dumpEval);
@@ -288,8 +286,8 @@ namespace StoryletFramework
             if (AsyncReshuffleInProgress())
                 throw new InvalidOperationException("Async reshuffle in progress, can't call ReshuffleAsync().");
 
-            _reshuffleState.Callback = callback;
             ReshufflePrep(filter, dumpEval);
+            _reshuffleState.Callback = callback;
         }
 
         public bool AsyncReshuffleInProgress()
