@@ -123,12 +123,12 @@ describe('Storylets', () => {
       console.log(barks.dumpDrawPile());
 
       let card = barks.draw();
-      assert.notEqual(null, card);
+      assert.equal(card.id, "welcome");
 
       card = barks.draw();
       assert.notEqual(null, card);
 
-      console.log(dump_eval.join('\n'));
+      //console.log(dump_eval.join('\n'));
 
     });
   });

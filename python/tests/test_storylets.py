@@ -109,12 +109,12 @@ class TestStorylets(unittest.TestCase):
         while barks.async_reshuffle_in_progress():
             barks.update()
     
-        print(barks.dump_draw_pile())
+        #print(barks.dump_draw_pile())
+    
+        card = barks.draw()
+        self.assertEqual(card.id, "welcome")
     
         card = barks.draw()
         self.assertIsNotNone(card)
     
-        card = barks.draw()
-        self.assertIsNotNone(card)
-    
-        print("\n".join(dump_eval))
+        #print("\n".join(dump_eval))
