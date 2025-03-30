@@ -6,7 +6,8 @@
     ],
     "settings": {
         "python.analysis.extraPaths": [
-            "./python/src"
+            "./python/src",
+            "./python/lib/expression-parser"
         ],
         "files.associations": {
             "string": "cpp",
