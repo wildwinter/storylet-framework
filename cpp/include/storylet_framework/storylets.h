@@ -6,6 +6,9 @@
 #ifndef STORYLETS_H
 #define STORYLETS_H
 
+#include "utils.h"
+#include "context.h"
+
 namespace StoryletFramework {
 
     class Deck {

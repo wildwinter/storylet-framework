@@ -73,7 +73,8 @@
             "ranges": "cpp",
             "span": "cpp",
             "any": "cpp",
-            "filesystem": "cpp"
+            "filesystem": "cpp",
+            "functional": "cpp"
         }
     }
 }

@@ -6,11 +6,13 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Add include directory
-include_directories(include)
+include_directories(include lib/expression-parser/include)
 
 # Source files
 file(GLOB LIB_SOURCES "src/*.cpp")
+file(GLOB LIB_SOURCES "lib/expression-parser/src/*.cpp")
 file(GLOB LIB_HEADERS "include/storylet_framework/*.h")
+file(GLOB LIB_HEADERS "lib/expression-parser/include/expression_parser/*.h")
 
 # Create the library (static or shared)
 option(BUILD_SHARED_LIBS "Build shared libraries instead of static" ON)
