@@ -31,21 +31,6 @@ namespace StoryletFramework
                 std::swap(array[i], array[j]);
             }
         }
-
-        // Copy an unordered_map
-        static std::unordered_map<std::string, std::any> CopyObject(const std::unordered_map<std::string, std::any>& original)
-        {
-            return std::unordered_map<std::string, std::any>(original);
-        }
-
-        // Update an unordered_map with another unordered_map
-        static void UpdateObject(std::unordered_map<std::string, std::any>& original, const std::unordered_map<std::string, std::any>& additions)
-        {
-            for (const auto& kvp : additions)
-            {
-                original[kvp.first] = kvp.second;
-            }
-        }
     };
 }
 

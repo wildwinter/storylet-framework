@@ -8,6 +8,7 @@
 #include <stdexcept>
 #include <iostream>
 #include <locale>
+#include <regex>
 
 std::string loadTestFile(const std::string& filepath) {
     std::string path = std::filesystem::absolute("../../tests/" + filepath).string();
@@ -31,4 +32,25 @@ std::string joinStrings(std::vector<std::string>& strList, std::string join) {
         oss << strList[i];
     }
     return oss.str();
+}
+
+// Remove comments from a JSON string
+std::string stripJsonComments(const std::string& jsonText) {
+    // Remove block comments (/* ... */)
+    std::regex blockCommentRegex(R"(/\*[\s\S]*?\*/)");
+    std::string withoutBlockComments = std::regex_replace(jsonText, blockCommentRegex, "");
+
+    // Remove line comments (// ...)
+    std::regex lineCommentRegex(R"(//.*$)");
+    std::string withoutComments = std::regex_replace(withoutBlockComments, lineCommentRegex, "");
+
+    return withoutComments;
+}
+
+// Load and parse a JSON file, stripping comments
+nlohmann::json loadJsonFile(const std::string& fileName) {
+    std::string text = loadTestFile(fileName);
+    text = stripJsonComments(text);
+
+    return nlohmann::json::parse(text);
 }

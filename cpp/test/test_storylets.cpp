@@ -5,25 +5,25 @@
 #include "catch_amalgamated.hpp"
 #include "test_utils.h"
 #include <fstream>
+#include <iostream>
 
 using namespace StoryletFramework;
 
 TEST_CASE( "Simple") {
 
-    Deck deck;
-    /*Parser parser;
+    DumpEval dumpEval;
 
-    auto expression = parser.Parse("get_name()=='fred' and counter>0 and 5/5.0!=0");
-
-    Context context;
-    context["get_name"] = make_function_wrapper([]() -> std::string {
-        return "fred";
-    });
-    context["counter"] = 1;
-
-    std::any result = expression->Evaluate(context);
-
-    REQUIRE(std::any_cast<bool>(result) == true);*/
-    auto result = true;
-    REQUIRE(result == true);
+    nlohmann::json json = loadJsonFile("Streets.jsonc");
+    StoryletFramework::Context context;
+    std::shared_ptr<Deck> deck = Deck::FromJson(json, &context, true, &dumpEval);
+    
+    /*auto card = deck->Draw();
+    REQUIRE(card != nullptr);
+    
+    card = deck->Draw();
+    REQUIRE(card != nullptr);
+    
+    for (const auto& line : dumpEval) {
+        std::cout << line << '\n';
+    }*/
 }

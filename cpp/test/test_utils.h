@@ -5,7 +5,11 @@
 #define TEST_UTILS_H
 
 #include <string>
+#include <vector>
+#include "storylet_framework/json_utils.h"
 
 std::string loadTestFile(const std::string& filepath);
 std::string joinStrings(std::vector<std::string>& strList, std::string join);
+nlohmann::json loadJsonFile(const std::string& fileName);
+
 #endif

@@ -74,7 +74,8 @@
             "span": "cpp",
             "any": "cpp",
             "filesystem": "cpp",
-            "functional": "cpp"
+            "functional": "cpp",
+            "valarray": "cpp"
         }
     }
 }
