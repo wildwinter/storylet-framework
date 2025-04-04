@@ -411,6 +411,11 @@ std::any Variable::Evaluate(const Context &context, std::vector<std::string>* du
     if (it == context.end())
         throw std::runtime_error("Variable '" + name + "' not found in context.");
     std::any value = it->second;
+
+    if (value.type() == typeid(const char*)) {
+        value = std::string(std::any_cast<const char*>(value));
+    }
+
     if (!(value.type() == typeid(int) || value.type() == typeid(double) ||
           value.type() == typeid(bool) || value.type() == typeid(std::string)))
         throw std::runtime_error("Variable '" + name + "' must return bool, string, or numeric.");

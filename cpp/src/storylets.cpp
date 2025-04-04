@@ -160,7 +160,7 @@
          }
          if (config.contains("content"))
          {
-             storylet->content = JsonToKeyedMap(config["content"]);
+             storylet->content = config["content"];
          }
          return storylet;
      }

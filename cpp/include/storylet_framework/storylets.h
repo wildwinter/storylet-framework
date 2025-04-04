@@ -24,7 +24,7 @@ namespace StoryletFramework {
     {
     public:
         std::string id; // Unique ID of the storylet
-        KeyedMap content; // Application-defined content
+        nlohmann::json content; // Application-defined content
         int redraw = REDRAW_ALWAYS; // Redraw setting
         KeyedMap updateOnDrawn; // Updates to context
 

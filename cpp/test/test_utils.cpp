@@ -10,6 +10,8 @@
 #include <locale>
 #include <regex>
 
+namespace StoryletFramework {
+
 std::string loadTestFile(const std::string& filepath) {
     std::string path = std::filesystem::absolute("../../tests/" + filepath).string();
     std::ifstream file(path, std::ios::in); // Open file for reading
@@ -40,9 +42,13 @@ std::string stripJsonComments(const std::string& jsonText) {
     std::regex blockCommentRegex(R"(/\*[\s\S]*?\*/)");
     std::string withoutBlockComments = std::regex_replace(jsonText, blockCommentRegex, "");
 
-    // Remove line comments (// ...)
-    std::regex lineCommentRegex(R"(//.*$)");
+    // Remove line comments (// ...) - ensure it handles inline comments properly
+    std::regex lineCommentRegex(R"(//[^\n\r]*)");
     std::string withoutComments = std::regex_replace(withoutBlockComments, lineCommentRegex, "");
+
+    // Trim any trailing whitespace or newlines
+    withoutComments.erase(std::remove(withoutComments.begin(), withoutComments.end(), '\r'), withoutComments.end());
+    withoutComments.erase(std::remove(withoutComments.begin(), withoutComments.end(), '\n'), withoutComments.end());
 
     return withoutComments;
 }
@@ -53,4 +59,6 @@ nlohmann::json loadJsonFile(const std::string& fileName) {
     text = stripJsonComments(text);
 
     return nlohmann::json::parse(text);
+}
+
 }
