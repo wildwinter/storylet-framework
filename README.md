@@ -6,35 +6,33 @@ This is designed to be cross-platform and implementation agnostic when it comes 
 What's it for? To do things like this:
 
 ```javascript
-import { Deck } from './storyletFramework.js';
+import { deckFromJson } from './storyletFramework.js';
 
 const context = {
     floor_level:0,
     on_fire:false
 };
 
-const rooms = Deck.fromJson(loadJsonFile("Rooms.jsonc"), context);
+const rooms = deckFromJson(loadJsonFile("Rooms.jsonc"), context);
 
-console.log(rooms.draw().content.title); // "The Kitchen"
-console.log(rooms.draw().content.title); // "The Scullery"
-console.log(rooms.draw().content.title); // "An Ordinary Cupboard"
-console.log(rooms.draw().content.title); // "The Entry Hall"
+console.log(rooms.drawAndPlaySingle().content.title); // "The Kitchen"
+console.log(rooms.drawAndPlaySingle().content.title); // "The Scullery"
+console.log(rooms.drawAndPlaySingle().content.title); // "An Ordinary Cupboard"
+console.log(rooms.drawAndPlaySingle().content.title); // "The Entry Hall"
 
 context.floor_level = 1;
 
-rooms.reshuffle();
-
-console.log(rooms.draw().content.title); // "The Bedroom"
-console.log(rooms.draw().content.title); // "An Ordinary Cupboard"
-console.log(rooms.draw().content.title); // "The Bathroom"
-console.log(rooms.draw().content.title); // "The Upstairs Lounge"
+const moreCards = rooms.drawAndPlay(4);
+console.log(moreCards[0].content.title); // "The Bedroom"
+console.log(moreCards[1].content.title); // "An Ordinary Cupboard"
+console.log(moreCards[2].content.title); // "The Bathroom"
+console.log(moreCards[4].content.title); // "The Upstairs Lounge"
 
 context.on_fire = true;
 
-rooms.reshuffle();
-console.log(rooms.draw().content.title); // "The Bedroom, But It's On Fire!"
-console.log(rooms.draw().content.title); // "An Ordinary Cupboard"
-console.log(rooms.draw().content.title); // "The Upstairs Lounge"
+console.log(rooms.drawAndPlaySingle().content.title); // "The Bedroom, But It's On Fire!"
+console.log(rooms.drawAndPlaySingle().content.title); // "An Ordinary Cupboard"
+console.log(rooms.drawAndPlaySingle().content.title); // "The Upstairs Lounge"
 
 ```
 
@@ -64,23 +62,21 @@ console.log(rooms.draw().content.title); // "The Upstairs Lounge"
 Or this:
 
 ```javascript
-import { Deck } from './storyletFramework.js';
+import { deckFromJson } from './storyletFramework.js';
 
 const context = {
     monsters_nearby:false
 };
 
-const barks = Deck.fromJson(loadJsonFile("Barks.jsonc"), context);
+const barks = deckFromJson(loadJsonFile("Barks.jsonc"), context);
 
-console.log(barks.draw().content.text); // "This place looks fine, no monsters here."
-console.log(barks.draw().content.text); // "Can't see a monster. Isn't this great?"
+console.log(barks.drawAndPlaySingle().content.text); // "This place looks fine, no monsters here."
+console.log(barks.drawAndPlaySingle().content.text); // "Can't see a monster. Isn't this great?"
 
 context.monsters_nearby = true;
 
-barks.reshuffle();
-
-console.log(barks.draw().content.text); // "Whoah, monsters! Look out!"
-console.log(barks.draw().content.text); // "Monsters, sir! Thousands of 'em!"
+console.log(barks.drawAndPlaySingle().content.text); // "Whoah, monsters! Look out!"
+console.log(barks.drawAndPlaySingle().content.text); // "Monsters, sir! Thousands of 'em!"
 
 ```
 
@@ -93,7 +89,6 @@ console.log(barks.draw().content.text); // "Monsters, sir! Thousands of 'em!"
     * [Storylet JSON format](#storylet-json-format)
     * [Expressions](#expressions)
     * [Specificity](#specificity)
-    * [Async Reshuffle](#async-reshuffle)
     * [Filtering](#filtering)
     * [Debugging](#debugging)
     * [Javascript as an ES6 module](#javascript-as-an-es6-module)
@@ -109,9 +104,11 @@ A **storylet** is a little chunk of experience. A scene, or a line, or a random 
 
 The best metaphor I've heard for these are a set of *cards* in a *deck*. Think of the boardgames you know where you draw a card for the next room, or the next counter, or the item that you've picked up.
 
-This framework lets you define the conditions for a storylet, and to *reshuffle* the deck into a draw pile of *what is a valid card right now*. Then you can draw from the deck, until you run out.
+This framework lets you define the conditions for a storylet, and when you ask to *draw* storylets from a deck, it is reshuffled into a draw pile of *what is a valid card right now* before your cards are issued.
 
-The framework also contains rules for **managing priority** (which card is most appropriate right now? bubble it to the top), how often a card can be *redrawn*, and various other bits and pieces.
+When you *play* a storylet, it is marked within the deck as to how long it will be before it can be drawn again, depending on the *redraw* rules you give it.
+
+The framework also contains rules for **managing priority** (which card is most appropriate right now? bubble it to the top), and various other bits and pieces.
 
 The code here is available as Javascript, C++, C#, and Python and should behave the same way for each.
 
@@ -131,10 +128,8 @@ Releases are available in the releases area in [Github](https://github.com/wildw
 
 * Create your `context`, which can hold properties with values, or hold functions that can be called by expressions. This is implemented by my [expression-parser](https://github.com/wildwinter/expression-parser).
 * Load a deck of cards from JSON into a `Deck`, passing it your context.
-* Draw cards from the deck, as needed, by calling `draw()`
-* When you change your context, you call `reshuffle()` and the draw pile will be recalculated to give you a freshly shuffled deck of relevant cards.
-
-*There is also a variant of this designed to work with game engines where the reshuffle can be done asynchronously across several frames - useful if you have a load of storylets. See `reshuffleAsync()`*
+* Draw cards from the deck, as needed, by calling `draw()`, `drawSingle()` etc.
+* When you use a card, call `play()` on it to make the deck aware that that card can't be drawn again until it fits your rules.
 
 ### Storylet JSON Format
 
@@ -153,9 +148,9 @@ The basic storylet format is this:
     "redraw": 4,
     // Optional - your app-specific content, whatever that might be.
     "content": {/*something*/},
-    // Optional - updates the context with the values or expressions supplied when the storylet is drawn.
+    // Optional - updates the context with the values or expressions supplied when the storylet is played.
     // Makes it easy to set basic flags and so on.
-    "updateOnDrawn": {
+    "updateOnPlayed": {
         "someVal":15,
         "someFlag":true,
         "someIncrementalProp":"someIncrementalProp+1"
@@ -193,7 +188,7 @@ A packet can also contain a `context` section, which is declaring initial variab
     [
         {"id":"myStory1", 
             "content":{"title":"Storylet 1"}, 
-            "updateOnDrawn":{"played_funky_storylet":true}  // Set this var when this storylet is played
+            "updateOnPlayed":{"played_funky_storylet":true}  // Set this var when this storylet is played
         },
         {"id":"myStory2", 
             "condition":"!played_funky_storylet", // Only make this storylet available when funky storylet hasn't played!
@@ -222,7 +217,7 @@ A packet can also contain a `defaults` section, which means that is gives defaul
         {"id":"myStory1", 
             /* "redraw": "never" is automatically applied now. */
             "content":{"title":"Storylet 1"}, 
-            "updateOnDrawn":{"played_funky_storylet":true}  // Set this var when this storylet is played
+            "updateOnPlayed":{"played_funky_storylet":true}  // Set this var when this storylet is played
         },
         {"id":"myStory2", 
             /* "redraw": "never" is automatically applied now. */
@@ -269,7 +264,7 @@ At any point, instead of specifying a storylet, you can specify a packet of stor
 }
 ```
 ### Expressions
-Expressions used in conditions or priorities or `updateOnDrawn` are implemented by my [expression-parser](https://github.com/wildwinter/expression-parser) library.
+Expressions used in conditions or priorities or `updateOnPlayed` are implemented by my [expression-parser](https://github.com/wildwinter/expression-parser) library.
 
 This lets you have simple expressions and also get values from your `context` or call functions from your `context`. 
 Common operators such as `+, -, /, *, and, or, !, not, ==, !=, >=`, brackets and so on all work as expected.
@@ -277,15 +272,13 @@ Common operators such as `+, -, /, *, and, or, !, not, ==, !=, >=`, brackets and
 "condition":"color=='red'"
 "condition":"playerRace('orc') and (on_fire or water_level>=5)"
 
-"updateOnDrawn":{
+"updateOnPlayed":{
     "someCounter":"someCounter+1"
 }
 ```
 
 ### Specificity
-There are some situations (for example, bark implementations) where it's quite useful to have the priority of a storylet
-to be defined by how *specific* the condition is. That is, the more clauses in the condition, the more relevant the storylet
-probably is to the current situation.
+There are some situations (for example, bark implementations) where it's quite useful to have the priority of a storylet to be defined by how *specific* the condition is. That is, the more clauses in the condition, the more relevant the storylet probably is to the current situation.
 
 You can turn this on for the deck using `useSpecificity=true`. Priorities still take precedence, but within each priority storylets are sorted by specificity.
 
@@ -303,41 +296,28 @@ So in this:
 ```
 'Your hat is on fire' will *always* be prioritised assuming those two conditions are true.
 
-### Async Reshuffle
-Normal `reshuffle()` is synchronous. But you might have a whole lot of storylets to process, and it might slow you down in a game implementation.
-
-Instead, a deck also has `reshuffleAsync()`. You call it, passing it a `callback`, then repeatedly call `update()` on the deck (say every frame) and eventually it will call the callback.
-
-You can change the number of storylets to be processed each update()
-```javascript
-    this.asyncReshuffleCount = 100;
-```
-
 ### Filtering
-`reshuffle()` and `reshuffleAsync()` lets you pass a `filter` function which can be used to check each storylet (and its contexts). If the filter function returns false, that storylet will be ignored.
+`draw()` lets you pass a `filter` function which can be used to check each storylet (and its contexts). If the filter function returns false, that storylet will be ignored.
 
 ### Debugging
 There are some hopefully helpful features for debugging. 
 
-Firstly, once you've done a reshuffle, you can call `deck.dumpDrawPile()` to return a string that will list the IDs of all the storylets currently available, in order.
-
-Secondly, you can pass an array in the `dump_eval` param to `reshuffle()` or `reshuffleAsync()` or various other places and information on evaluations and processing that have been performed on different storylets will be added to the array.
+You can pass an empty array of strings in the `dump_eval` param to `draw()` or various other places and information on evaluations and processing that have been performed on different storylets will be added to the array.
 
 ### Javascript as an ES6 module
 ```javascript
-import { Deck } from './storyletFramework.js';
+import { deckFromJson } from './storyletFramework.js';
 
 const text = readFileSync("Rooms.jsonc", 'utf-8');
 const json = JSON.parse(text);
 
 const context = {
     some_value:0,
-    some_fn: (storylet) => {return some_response();}
+    some_fn: (param) => {return some_response(param);}
 }
 
-const deck = Deck.fromJson(json, context);
-
-let card = deck.draw();
+const deck = deckFromJson(json, context);
+let card = deck.drawAndPlaySingle();
 console.log(card.id);
 ```
 
@@ -359,12 +339,11 @@ Either you can use the same module / ESM format (`storyletFramework.js`):
 
         const context = {
             some_value:0,
-            some_fn: (storylet) => {return some_response();}
+            some_fn: (param) => {return some_response(param);}
         }
 
-        const deck = Deck.fromJson(json, context);
-
-        let card = deck.draw();
+        const deck = deckFromJson(json, context);
+        let card = deck.drawAndPlaySingle();
         console.log(card.id);
     </script>
 </body>
@@ -386,13 +365,12 @@ Or you can use a minified IIFE version (`storyletFramework.min.js`):
 
         const context = {
             some_value:0,
-            some_fn: (storylet) => {return some_response();}
+            some_fn: (param) => {return some_response(param);}
         }
 
         // Access the global StoryletFramework object
-        const deck = StoryletFramework.Deck.fromJson(json, context);
-
-        let card = deck.draw();
+        const deck = StoryletFramework.deckFromJson(json, context);
+        let card = deck.drawAndPlaySingle();
         console.log(card.id);
     </script>
 </body>
@@ -401,9 +379,18 @@ Or you can use a minified IIFE version (`storyletFramework.min.js`):
 
 ### Python
 ```Python
-from storylet_framework.storylets import Storylets
+from storylet_framework.json_loader import deck_from_json
 
-XXX
+json_data = load_json_file("Rooms.jsonc")
+
+context = {
+    "some_value": 0,
+    "some_fn": lambda param: some_response(param)
+}
+
+deck = deck_from_json(json_data, context)
+card = deck.draw_and_play_single()
+print(card.id)
 
 ```
 
@@ -417,8 +404,16 @@ class Program
 {
     static void Main(string[] args)
     {
-        var storylets = new Storylets();
-XXX
+        var context = new Dictionary<string, object>
+        {
+            { "some_value", 0 },
+            { "some_fn", new Func<string, bool>(param => someResponse(param)) }
+        };
+
+        Dictionary<string, object> json = loadJsonAsDictSomehow("Rooms.jsonc);
+        var deck = JsonLoader.DeckFromJson(json, context);
+        var card = deck.DrawAndPlaySingle();
+        Console.WriteLine(card.Id);
     }
 }
 ```
@@ -427,18 +422,23 @@ XXX
 I haven't supplied any built libs (because building multiplatform libs is outside my scope right now). Instead I have supplied source code in the zip - you should be able to build and use it with your project.
 
 ```cpp
-#include "storylet_framework/storylets.h"
+#include "storylet_framework/json_loader.h"
 #include <iostream>
 #include <string>
 
 using namespace StoryletFramework;
 
 int main() {
-    // Create an instance of StoryletFramework::Storylets
-    Storylets storylets;
 
-    XXX
+    nlohmann::json json = loadJsonFile("Streets.jsonc");
+    StoryletFramework::Context context;
+    context["some_value"] = 0;
+    context["some_fn"] = ExpressionParser::make_function_wrapper(
+        [](const std::string& param) { return some_response(param); });
 
+    std::shared_ptr<Deck> deck = DeckFromJson(json, &context, &dumpEval);
+    auto card = deck->DrawAndPlaySingle();
+    std::cout << card->id << '\n';
     return 0;
 }
 ```
