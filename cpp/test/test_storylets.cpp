@@ -186,3 +186,35 @@ TEST_CASE("AsyncReshuffleTest") {
     //     std::cout << line << '\n';
     // }
 }
+
+TEST_CASE("DrawHandTest") {
+    // Define the context
+    StoryletFramework::Context context;
+    context["street_id"] = "";
+    context["street_wealth"] = 1;
+    context["encounter_tag"] = ExpressionParser::make_function_wrapper([](const std::string& tag) { return true; });
+
+    // Load the JSON file and create a Deck
+    nlohmann::json json = loadJsonFile("Barks.jsonc");
+    std::shared_ptr<Deck> deck = Deck::FromJson(json, &context, true);
+
+    // Draw a hand of 10 cards and assert the length is not 10
+    auto drawn = deck->DrawHand(10);
+    REQUIRE(drawn.size() != 10);
+
+    // Reset the deck and draw a hand of 10 cards with reshuffling
+    deck->Reset();
+    drawn = deck->DrawHand(10, true);
+    REQUIRE(drawn.size() == 10);
+    REQUIRE(drawn[0]->id == "welcome");
+
+    // Uncomment the following lines for debugging
+    // for (size_t i = 0; i < drawn.size(); i++) {
+    //     std::cout << "Card " << i << ": " << drawn[i]->id << std::endl;
+    // }
+
+    // Uncomment to debug the evaluation steps
+    // for (const auto& line : dumpEval) {
+    //     std::cout << line << '\n';
+    // }
+}

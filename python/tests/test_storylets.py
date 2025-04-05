@@ -118,3 +118,33 @@ class TestStorylets(unittest.TestCase):
         self.assertIsNotNone(card)
     
         #print("\n".join(dump_eval))
+
+    def test_draw_hand(self):
+        dump_eval = []
+
+        context = {
+            "street_id": "",
+            "street_wealth": 1,
+            "encounter_tag": lambda tag: True
+        }
+
+        # Load the JSON file and create a Deck
+        json_data = load_json_file("Barks.jsonc")
+        deck = Deck.from_json(json_data, context, reshuffle=True, dump_eval=dump_eval)
+
+        # Draw a hand of 10 cards and assert the length is not 10
+        drawn = deck.draw_hand(10)
+        self.assertNotEqual(len(drawn), 10)
+
+        # Reset the deck and draw a hand of 10 cards with reshuffling
+        deck.reset()
+        drawn = deck.draw_hand(10, reshuffle_if_needed=True)
+        self.assertEqual(len(drawn), 10)
+        self.assertEqual(drawn[0].id, "welcome")
+
+        # Uncomment the following lines for debugging
+        # for i, card in enumerate(drawn):
+        #     print(f"Card {i}: {card.id}")
+
+        # Uncomment to debug the evaluation steps
+        # print("\n".join(dump_eval))

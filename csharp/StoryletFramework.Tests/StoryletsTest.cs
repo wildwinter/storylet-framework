@@ -185,4 +185,39 @@ public class StoryletsTest
         // Uncomment the following line to debug the evaluation steps
         // Console.WriteLine(string.Join('\n', dumpEval));
     }
+
+        [Fact]
+        public void DrawHandTest()
+        {
+            // Define the context as a Dictionary<string, object>
+            var context = new Dictionary<string, object>
+            {
+                { "street_id", "" },
+                { "street_wealth", 1 },
+                { "encounter_tag", new Func<string, bool>(tag => true) }
+            };
+        
+            // Load the JSON file and create a Deck
+            var json = TestUtils.LoadJsonFile("Barks.jsonc");
+            var deck = Deck.FromJson(json, context, reshuffle: true);
+        
+            // Draw a hand of 10 cards and assert the length is not 10
+            var drawn = deck.DrawHand(10);
+            Assert.NotEqual(10, drawn.Count);
+        
+            // Reset the deck and draw a hand of 10 cards with reshuffling
+            deck.Reset();
+            drawn = deck.DrawHand(10, reshuffleIfNeeded: true);
+            Assert.Equal(10, drawn.Count);
+            Assert.Equal("welcome", drawn[0].Id);
+        
+            // Uncomment the following lines for debugging
+            // for (int i = 0; i < drawn.Count; i++)
+            // {
+            //     Console.WriteLine($"Card {i}: {drawn[i].Id}");
+            // }
+        
+            // Uncomment to debug the evaluation steps
+            // Console.WriteLine(string.Join('\n', dumpEval));
+        }
 }

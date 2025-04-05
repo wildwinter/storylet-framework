@@ -269,6 +269,29 @@
         return storylet;
     }
 
+    std::vector<std::shared_ptr<Storylet>> Deck::DrawHand(int count, bool reshuffleIfNeeded) {
+        std::vector<std::shared_ptr<Storylet>> storylets;
+    
+        for (int i = 0; i < count; i++) {
+            if (_drawPile.empty()) {
+                if (reshuffleIfNeeded) {
+                    Reshuffle(nullptr, nullptr);
+                } else {
+                    break;
+                }
+            }
+    
+            auto storylet = Draw();
+            if (!storylet) {
+                break;
+            }
+    
+            storylets.push_back(storylet);
+        }
+    
+        return storylets;
+    }
+
     void Deck::_readPacketFromJson(const nlohmann::json& json, nlohmann::json defaults, DumpEval* dumpEval)
     {
         if (json.contains("context"))

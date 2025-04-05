@@ -1,5 +1,7 @@
-Fix the reshuffle problem.
+Move JSON out into separate files.
 Images for doc.
+Unity version.
+Unreal version.
 
 DONE
 ----

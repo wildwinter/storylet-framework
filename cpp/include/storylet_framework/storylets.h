@@ -100,6 +100,8 @@ namespace StoryletFramework {
         void Update();
         std::string DumpDrawPile() const;
         std::shared_ptr<Storylet> Draw();
+        std::vector<std::shared_ptr<Storylet>> DrawHand(int count, bool reshuffleIfNeeded = false);
+
     };
 
 } // namespace StoryletFramework

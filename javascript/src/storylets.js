@@ -255,7 +255,7 @@ export class Deck {
   // Reset the whole pack, including all redraw counters.
   reset() {
     this.currentDraw = 0;
-    for (const storylet of this._all) {
+    for (const storylet of this._all.values()) {
       storylet.reset();
     }
   }
@@ -415,5 +415,26 @@ export class Deck {
       updateContext(this._context, storylet.updateOnDrawn);
     storylet.drawn(this._currentDraw);
     return storylet;
+  }
+
+  drawHand(count, reshuffleIfNeeded=false) {
+    const storylets = [];
+    for (let i=0;i<count;i++) {
+
+      if (this._drawPile.length==0) {
+        if (reshuffleIfNeeded) {
+          this.reshuffle();
+        } else {
+          break;
+        }
+      }
+
+      const storylet = this.draw();
+      if (storylet==null)
+        break;
+      
+      storylets.push(storylet);
+    }
+    return storylets;
   }
 }

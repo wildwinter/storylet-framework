@@ -333,3 +333,20 @@ class Deck:
             update_context(self._context, storylet.update_on_drawn)
         storylet.drawn(self._current_draw)
         return storylet
+
+    def draw_hand(self, count, reshuffle_if_needed=False):
+        storylets = []
+        for _ in range(count):
+            if len(self._draw_pile) == 0:
+                if reshuffle_if_needed:
+                    self.reshuffle()
+                else:
+                    break
+
+            storylet = self.draw()
+            if storylet is None:
+                break
+
+            storylets.append(storylet)
+
+        return storylets

@@ -385,6 +385,36 @@ namespace StoryletFramework
             return storylet;
         }
 
+        public List<Storylet> DrawHand(int count, bool reshuffleIfNeeded = false)
+        {
+            var storylets = new List<Storylet>();
+        
+            for (int i = 0; i < count; i++)
+            {
+                if (_drawPile.Count == 0)
+                {
+                    if (reshuffleIfNeeded)
+                    {
+                        Reshuffle();
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+        
+                var storylet = Draw();
+                if (storylet == null)
+                {
+                    break;
+                }
+        
+                storylets.Add(storylet);
+            }
+        
+            return storylets;
+        }
+
         // For debugging: Dump the IDs of the current draw pile
         public string DumpDrawPile()
         {

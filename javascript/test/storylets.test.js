@@ -133,4 +133,38 @@ describe('Storylets', () => {
     });
   });
 
+  describe('ShuffleTest', () => {
+    it('', () => {
+
+      let dump_eval = [];
+
+      const context = {
+        street_id:"",
+        street_wealth:1,
+        encounter_tag:(tag) => true
+      };
+
+      const json = loadJsonFile("Barks.jsonc");
+      const deck = Deck.fromJson(json, context, true, dump_eval);
+
+      let drawn = deck.drawHand(10);
+      assert.notEqual(drawn.length, 10);
+
+      /*for (let i=0;i<drawn.length;i++) {
+        console.log(`Card ${i}: ${drawn[i].id}`);
+      }*/
+
+      deck.reset();
+      drawn = deck.drawHand(10, true);
+      assert.equal(drawn.length, 10);
+      assert.equal(drawn[0].id, "welcome");
+      /*for (let i=0;i<drawn.length;i++) {
+        console.log(`Card ${i}: ${drawn[i].id}`);
+      }*/
+
+
+      //console.log(dump_eval.join('\n'));
+
+    });
+  });
 });
