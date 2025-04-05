@@ -1,9 +1,7 @@
 // This file is part of an MIT-licensed project: see LICENSE file or README.md for details.
 // Copyright (c) 2025 Ian Thomas
 
-using System.IO;
 using System.Text.RegularExpressions;
-using StoryletFramework;
 
 namespace StoryletFramework.Tests;
 
@@ -30,6 +28,6 @@ public static class TestUtils
         string text = LoadTestFile(fileName);
         text = StripJsonComments(text);
 
-        return JsonHelpers.TextToJson(text);
+        return JsonLoader.TextToJson(text);
     }
 }

@@ -1,8 +1,6 @@
 // This file is part of an MIT-licensed project: see LICENSE file or README.md for details.
 // Copyright (c) 2025 Ian Thomas
 
-using StoryletFramework;
-
 namespace StoryletFramework.Tests;
 
 public class StoryletsTest
@@ -13,7 +11,7 @@ public class StoryletsTest
         var dumpEval = new List<string>();
 
         var json = TestUtils.LoadJsonFile("Streets.jsonc");
-        var deck = Deck.FromJson(json, new Dictionary<string, object>(), true, dumpEval);
+        var deck = JsonLoader.DeckFromJson(json, new Dictionary<string, object>(), true, dumpEval);
 
         var card = deck.Draw();
         Assert.NotNull(card);
@@ -37,7 +35,7 @@ public class StoryletsTest
     
         // Load the JSON file and create a Deck
         var json = TestUtils.LoadJsonFile("Barks.jsonc");
-        var barks = Deck.FromJson(json, context);
+        var barks = JsonLoader.DeckFromJson(json, context);
     
         // Uncomment the following line to debug the draw pile
         // Console.WriteLine(barks.DumpDrawPile());
@@ -59,25 +57,25 @@ public class StoryletsTest
         };
 
         // Load the JSON files and create Decks
-        var streets = Deck.FromJson(TestUtils.LoadJsonFile("Streets.jsonc"), context);
-        var encounters = Deck.FromJson(TestUtils.LoadJsonFile("Encounters.jsonc"), context);
-        var barks = Deck.FromJson(TestUtils.LoadJsonFile("Barks.jsonc"), context);
+        var streets = JsonLoader.DeckFromJson(TestUtils.LoadJsonFile("Streets.jsonc"), context);
+        var encounters = JsonLoader.DeckFromJson(TestUtils.LoadJsonFile("Encounters.jsonc"), context);
+        var barks = JsonLoader.DeckFromJson(TestUtils.LoadJsonFile("Barks.jsonc"), context);
 
         // Define a method to set the current street
         void SetStreet(Storylet street)
         {
             context["street_id"] = street.Id;
-            context["street_wealth"] = street.Content["wealth"];
+            context["street_wealth"] = street.Content?["wealth"] ?? 0;
             context["street_tag"] = new Func<string, bool>(tag => {
-                if (street.Content.ContainsKey("tags")) {
-                var tags = street.Content["tags"];
+                if (street.Content?.ContainsKey("tags")) {
+                var tags = street.Content?["tags"];
                     if (tags is List<string>) {
                         return ((List<string>)tags).Contains(tag);
                     }
                 }
                 return false;
                 });
-            Console.WriteLine($"Location: \"{street.Content["title"]}\"");
+            Console.WriteLine($"Location: \"{street.Content?["title"]}\"");
         }
 
         // Define a method to handle an encounter
@@ -93,12 +91,12 @@ public class StoryletsTest
             var encounter = encounters.Draw();
             context["encounter_tag"] = new Func<string, bool>(tag =>
             {
-                if ( encounter==null || !encounter.Content.ContainsKey("tags"))
+                if ( encounter==null || !encounter.Content?.ContainsKey("tags"))
                     return false;
-                return ((List<string>)encounter.Content["tags"]).Contains(tag);
+                return encounter?.Content?["tags"] is List<string> tags && tags.Contains(tag);
             });
 
-            Console.WriteLine($"  Encounter: \"{encounter?.Content["title"]}\"");
+            Console.WriteLine($"  Encounter: \"{encounter?.Content?["title"]}\"");
 
             barks.Reshuffle();
             // Uncomment the following line to debug the draw pile
@@ -107,14 +105,14 @@ public class StoryletsTest
             var bark = barks.Draw();
             if (bark != null)
             {
-                Console.WriteLine($"  Comment: \"{bark.Content["comment"]}\"");
+                Console.WriteLine($"  Comment: \"{bark.Content?["comment"]}\"");
             }
         }
 
         // First encounter - this should pull out a "start" location
         streets.Reshuffle(street => { 
-            if (street.Content.ContainsKey("tags")) {
-                var tags = street.Content["tags"];
+            if (street.Content?.ContainsKey("tags")) {
+                var tags = street.Content?["tags"];
                 if (tags is List<string>) {
                     return ((List<string>)tags).Contains("start");
                 }
@@ -157,7 +155,7 @@ public class StoryletsTest
     
         // Load the JSON file and create a Deck without reshuffling
         var json = TestUtils.LoadJsonFile("Barks.jsonc");
-        var barks = Deck.FromJson(json, context, reshuffle: false);
+        var barks = JsonLoader.DeckFromJson(json, context, reshuffle: false);
     
         // Perform an asynchronous reshuffle
         var dumpEval = new List<string>();
@@ -199,7 +197,7 @@ public class StoryletsTest
         
             // Load the JSON file and create a Deck
             var json = TestUtils.LoadJsonFile("Barks.jsonc");
-            var deck = Deck.FromJson(json, context, reshuffle: true);
+            var deck = JsonLoader.DeckFromJson(json, context, reshuffle: true);
         
             // Draw a hand of 10 cards and assert the length is not 10
             var drawn = deck.DrawHand(10);
