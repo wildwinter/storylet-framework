@@ -112,81 +112,15 @@
              _nextDraw = currentDraw + redraw;
          }
      }
- 
-     // Parse a Storylet from JSON-like data
-     std::shared_ptr<Storylet> Storylet::FromJson(const nlohmann::json& json, const nlohmann::json& defaults)
-     {
-         if (!json.contains("id"))
-         {
-             throw std::invalid_argument("No 'id' property in the storylet JSON.");
-         }
- 
-         nlohmann::json config = nlohmann::json::object();
-         config.update(defaults);
-         config.update(json);
- 
-         std::shared_ptr<Storylet> storylet = std::make_shared<Storylet>(config["id"].get<std::string>());
- 
-         if (config.contains("redraw"))
-         {
-             auto val = config["redraw"];
-             if (val == "always")
-                 storylet->redraw = REDRAW_ALWAYS;
-             else if (val == "never")
-                 storylet->redraw = REDRAW_NEVER;
-             else
-                 storylet->redraw = val.get<int>();
-         }
- 
-         if (config.contains("condition"))
-         {
-             storylet->SetCondition(config["condition"].get<std::string>());
-         }
- 
-         if (config.contains("priority"))
-         {
-            auto val = config["priority"];
-            if (val.is_number_integer())
-                storylet->SetPriority(val.get<int>());
-            else if (val.is_number_float())
-                storylet->SetPriority(static_cast<int>(val.get<double>()));
-            else if (val.is_string())
-                storylet->SetPriority(val.get<std::string>());
-         }
- 
-         if (config.contains("updateOnDrawn"))
-         {
-             storylet->updateOnDrawn = JsonToKeyedMap(config["updateOnDrawn"]);
-         }
-         if (config.contains("content"))
-         {
-             storylet->content = config["content"];
-         }
-         return storylet;
-     }
 
     Deck::Deck() {
-        _context = std::make_shared<Context>();
+        this->context = std::make_shared<Context>();
     }
 
     Deck::Deck(Context& context) {
-        _context = std::shared_ptr<Context>(&context, [](Context*) {
+        this->context = std::shared_ptr<Context>(&context, [](Context*) {
             // Do nothing, we don't own the context
         });
-    }
-
-    std::shared_ptr<Deck> Deck::FromJson(const nlohmann::json& json, Context* context, bool reshuffle, DumpEval* dumpEval)
-    {
-        std::shared_ptr<Deck> deck = std::make_shared<Deck>(*context);
-        deck->LoadJson(json, dumpEval);
-        if (reshuffle)
-            deck->Reshuffle(nullptr, dumpEval);
-        return deck;
-    }
-
-    void Deck::LoadJson(const nlohmann::json& json, DumpEval* dumpEval)
-    {
-        _readPacketFromJson(json, nlohmann::json::object(), dumpEval);
     }
 
     void Deck::Reset()
@@ -232,6 +166,20 @@
         }
     }
 
+    std::shared_ptr<Storylet> Deck::GetStorylet(const std::string& id) const {
+        auto it = _all.find(id);
+        if (it != _all.end())
+            return it->second;
+        return nullptr;
+    }
+
+    void Deck::AddStorylet(std::shared_ptr<Storylet> storylet)
+    {
+        if (_all.find(storylet->id) != _all.end())
+            throw std::invalid_argument("Duplicate storylet id: " + storylet->id);
+        _all[storylet->id] = storylet;
+    }
+
     std::string Deck::DumpDrawPile() const
     {
         if (AsyncReshuffleInProgress())
@@ -262,7 +210,7 @@
 
         if (!storylet->updateOnDrawn.empty())
         {
-            ContextUtils::UpdateContext(*_context, storylet->updateOnDrawn);
+            ContextUtils::UpdateContext(*context, storylet->updateOnDrawn);
         }
 
         storylet->Drawn(_currentDraw);
@@ -290,48 +238,6 @@
         }
     
         return storylets;
-    }
-
-    void Deck::_readPacketFromJson(const nlohmann::json& json, nlohmann::json defaults, DumpEval* dumpEval)
-    {
-        if (json.contains("context"))
-        {
-            ContextUtils::InitContext(*_context, json["context"], dumpEval);
-        }
-
-        if (json.contains("defaults"))
-        {
-            defaults.update(json["defaults"]);
-        }
-
-        if (json.contains("storylets"))
-        {
-            _readStoryletsFromJson(json["storylets"], defaults, dumpEval);
-        }
-    }
-
-    void Deck::_readStoryletsFromJson(const nlohmann::json& json, nlohmann::json defaults, DumpEval* dumpEval)
-    {
-        for (const auto& item : json)
-        {
-            if (item.contains("storylets") || item.contains("defaults") || item.contains("context"))
-            {
-                _readPacketFromJson(item, defaults, dumpEval);
-                continue;
-            }
-
-            if (!item.contains("id"))
-                throw std::invalid_argument("Json item is not a storylet or packet");
-
-            std::shared_ptr<Storylet> storylet = Storylet::FromJson(item, defaults);
-            if (_all.find(storylet->id) != _all.end())
-                throw std::invalid_argument("Duplicate storylet id: " + storylet->id);
-
-            _all[storylet->id] = storylet;
-            if (dumpEval)
-                dumpEval->push_back("Added storylet '" + storylet->id + "'");
-            
-        }
     }
 
     void Deck::_reshufflePrep(std::function<bool(const Storylet&)> filter, DumpEval* dumpEval)
@@ -365,10 +271,10 @@
             if (_reshuffleState.filter && !_reshuffleState.filter(*storylet))
                 continue;
 
-            if (!storylet->CheckCondition(*_context, _reshuffleState.dumpEval))
+            if (!storylet->CheckCondition(*context, _reshuffleState.dumpEval))
                 continue;
 
-            int priority = storylet->CalcCurrentPriority(*_context, useSpecificity, _reshuffleState.dumpEval);
+            int priority = storylet->CalcCurrentPriority(*context, useSpecificity, _reshuffleState.dumpEval);
 
             _reshuffleState.priorityMap[priority].push_back(storylet);
         }

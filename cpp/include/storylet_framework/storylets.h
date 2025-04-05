@@ -13,7 +13,6 @@
 #include "expression_parser/parser.h"
 #include "utils.h"
 #include "context.h"
-#include "json_utils.h"
 
 namespace StoryletFramework {
 
@@ -24,7 +23,7 @@ namespace StoryletFramework {
     {
     public:
         std::string id; // Unique ID of the storylet
-        nlohmann::json content; // Application-defined content
+        std::any content; // Application-defined content
         int redraw = REDRAW_ALWAYS; // Redraw setting
         KeyedMap updateOnDrawn; // Updates to context
 
@@ -58,20 +57,14 @@ namespace StoryletFramework {
 
         // Call when actually drawn - updates the redraw counter
         void Drawn(int currentDraw);
-
-        // Parse a Storylet from JSON
-        static std::shared_ptr<Storylet> FromJson(const nlohmann::json& json, const nlohmann::json& defaults);
     };
 
     class Deck
     {
     private:
-        bool useSpecificity = false;
-        int asyncReshuffleCount = 10;
         std::unordered_map<std::string, std::shared_ptr<Storylet>> _all; // Store shared_ptr to Storylet
         std::vector<std::shared_ptr<Storylet>> _drawPile; // Store shared_ptr to Storylet
         int _currentDraw = 0;
-        std::shared_ptr<Context> _context;
     
         struct ReshuffleState
         {
@@ -82,8 +75,6 @@ namespace StoryletFramework {
             DumpEval* dumpEval = nullptr;
         } _reshuffleState;
     
-        void _readPacketFromJson(const nlohmann::json& json, nlohmann::json defaults, DumpEval* dumpEval = nullptr);
-        void _readStoryletsFromJson(const nlohmann::json& json, nlohmann::json defaults, DumpEval* dumpEval = nullptr);
         void _reshufflePrep(std::function<bool(const Storylet&)> filter, DumpEval* dumpEval = nullptr);
         void _reshuffleDoChunk(size_t count);
         void _reshuffleFinalise();
@@ -91,16 +82,20 @@ namespace StoryletFramework {
     public:
         explicit Deck();
         explicit Deck(Context& context);
-        static std::shared_ptr<Deck> FromJson(const nlohmann::json& json, Context* context=nullptr, bool reshuffle = true, DumpEval* dumpEval = nullptr);
-        void LoadJson(const nlohmann::json& json, DumpEval* dumpEval = nullptr);
         void Reset();
         void Reshuffle(std::function<bool(const Storylet&)> filter = nullptr, DumpEval* dumpEval = nullptr);
         void ReshuffleAsync(std::function<void()> callback, std::function<bool(const Storylet&)> filter = nullptr, DumpEval* dumpEval = nullptr);
         bool AsyncReshuffleInProgress() const;
         void Update();
+        std::shared_ptr<Storylet> GetStorylet(const std::string& id) const;
+        void AddStorylet(std::shared_ptr<Storylet> storylet);
         std::string DumpDrawPile() const;
         std::shared_ptr<Storylet> Draw();
         std::vector<std::shared_ptr<Storylet>> DrawHand(int count, bool reshuffleIfNeeded = false);
+
+        std::shared_ptr<Context> context;
+        bool useSpecificity = false;
+        int asyncReshuffleCount = 10;
 
     };
 

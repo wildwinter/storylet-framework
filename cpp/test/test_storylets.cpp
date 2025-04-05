@@ -1,13 +1,14 @@
 // This file is part of an MIT-licensed project: see LICENSE file or README.md for details.
 // Copyright (c) 2025 Ian Thomas
 
-#include "storylet_framework/storylets.h"
+#include "storylet_framework/json_loader.h"
 #include "catch_amalgamated.hpp"
 #include "test_utils.h"
 #include <fstream>
 #include <iostream>
 
 using namespace StoryletFramework;
+using namespace StoryletFrameworkTest;
 
 TEST_CASE( "Simple") {
 
@@ -15,7 +16,7 @@ TEST_CASE( "Simple") {
 
     nlohmann::json json = loadJsonFile("Streets.jsonc");
     StoryletFramework::Context context;
-    std::shared_ptr<Deck> deck = Deck::FromJson(json, &context, true, &dumpEval);
+    std::shared_ptr<Deck> deck = DeckFromJson(json, &context, true, &dumpEval);
     
     auto card = deck->Draw();
     REQUIRE(card != nullptr);
@@ -37,7 +38,7 @@ TEST_CASE("Barks") {
 
     // Load the JSON file and create a Deck
     nlohmann::json json = loadJsonFile("Barks.jsonc");
-    std::shared_ptr<Deck> barks = Deck::FromJson(json, &context);
+    std::shared_ptr<Deck> barks = DeckFromJson(json, &context);
 
     // Uncomment the following line to debug the draw pile
     std::cout << barks->DumpDrawPile() << std::endl;
@@ -60,24 +61,25 @@ TEST_CASE("StreetSystem") {
     nlohmann::json encountersJson = loadJsonFile("Encounters.jsonc");
     nlohmann::json barksJson = loadJsonFile("Barks.jsonc");
 
-    std::shared_ptr<Deck> streets = Deck::FromJson(streetsJson, &context);
-    std::shared_ptr<Deck> encounters = Deck::FromJson(encountersJson, &context);
-    std::shared_ptr<Deck> barks = Deck::FromJson(barksJson, &context);
+    std::shared_ptr<Deck> streets = DeckFromJson(streetsJson, &context);
+    std::shared_ptr<Deck> encounters = DeckFromJson(encountersJson, &context);
+    std::shared_ptr<Deck> barks = DeckFromJson(barksJson, &context);
 
     // Define a method to set the current street
     auto SetStreet = [&](const Storylet& street) {
+        nlohmann::json content = ExtractJsonFromAny(street.content);
         context["street_id"] = street.id;
-        context["street_wealth"] = street.content["wealth"].get<int>();
+        context["street_wealth"] = content["wealth"].get<int>();
         context["street_tag"] = ExpressionParser::make_function_wrapper([&](const std::string& tag) {
-            if (street.content.contains("tags")) {
-                const auto& tags = street.content["tags"];
+            if (content.contains("tags")) {
+                const auto& tags = content["tags"];
                 if (tags.is_array()) {
                     return std::find(tags.begin(), tags.end(), tag) != tags.end();
                 }
             }
             return false;
         });
-        std::cout << "Location: \"" << street.content["title"] << "\"" << std::endl;
+        std::cout << "Location: \"" << content["title"] << "\"" << std::endl;
     };
 
     // Define a method to handle an encounter
@@ -90,15 +92,18 @@ TEST_CASE("StreetSystem") {
         // std::cout << encounters->DumpDrawPile() << std::endl;
 
         auto encounter = encounters->Draw();
-        context["encounter_tag"] = ExpressionParser::make_function_wrapper([&](const std::string& tag) {
-            if (!encounter || !encounter->content.contains("tags")) {
+        nlohmann::json content = ExtractJsonFromAny(encounter->content);
+
+        context["encounter_tag"] = ExpressionParser::make_function_wrapper([&](const std::string& tag) {    
+
+            if (!encounter || !content.contains("tags")) {
                 return false;
             }
-            const auto& tags = encounter->content["tags"];
+            const auto& tags = content["tags"];
             return std::find(tags.begin(), tags.end(), tag) != tags.end();
         });
 
-        std::cout << "  Encounter: \"" << (encounter ? encounter->content["title"] : "None") << "\"" << std::endl;
+        std::cout << "  Encounter: \"" << (encounter ? content["title"] : "None") << "\"" << std::endl;
 
         barks->Reshuffle();
         // Uncomment the following line to debug the draw pile
@@ -106,14 +111,16 @@ TEST_CASE("StreetSystem") {
 
         auto bark = barks->Draw();
         if (bark) {
-            std::cout << "  Comment: \"" << bark->content["comment"] << "\"" << std::endl;
+            nlohmann::json content = ExtractJsonFromAny(bark->content);
+            std::cout << "  Comment: \"" << content["comment"] << "\"" << std::endl;
         }
     };
 
     // First encounter - this should pull out a "start" location
     streets->Reshuffle([](const Storylet& street) {
-        if (street.content.contains("tags")) {
-            const auto& tags = street.content["tags"];
+        nlohmann::json content = ExtractJsonFromAny(street.content);
+        if (content.contains("tags")) {
+            const auto& tags = content["tags"];
             if (tags.is_array()) {
                 return std::find(tags.begin(), tags.end(), "start") != tags.end();
             }
@@ -154,7 +161,7 @@ TEST_CASE("AsyncReshuffleTest") {
 
     // Load the JSON file and create a Deck without reshuffling
     nlohmann::json json = loadJsonFile("Barks.jsonc");
-    std::shared_ptr<Deck> barks = Deck::FromJson(json, &context, false);
+    std::shared_ptr<Deck> barks = DeckFromJson(json, &context, false);
 
     // Perform an asynchronous reshuffle
     DumpEval dumpEval;
@@ -196,7 +203,7 @@ TEST_CASE("DrawHandTest") {
 
     // Load the JSON file and create a Deck
     nlohmann::json json = loadJsonFile("Barks.jsonc");
-    std::shared_ptr<Deck> deck = Deck::FromJson(json, &context, true);
+    std::shared_ptr<Deck> deck = DeckFromJson(json, &context, true);
 
     // Draw a hand of 10 cards and assert the length is not 10
     auto drawn = deck->DrawHand(10);

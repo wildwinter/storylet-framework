@@ -1,6 +1,7 @@
 #ifndef JSON_UTILS_H
 #define JSON_UTILS_H
 
+#include "storylet_framework/storylets.h"
 #include <json.hpp>
 #include <any>
 #include <string>
@@ -67,6 +68,14 @@ namespace nlohmann
 namespace StoryletFramework
 {
     using KeyedMap = std::unordered_map<std::string, std::any>;
+
+    std::shared_ptr<Storylet> StoryletFromJson(const nlohmann::json& json, const nlohmann::json& defaults);
+    std::shared_ptr<Deck> DeckFromJson(const nlohmann::json& json, Context* context = nullptr, bool reshuffle = true, DumpEval* dumpEval = nullptr);
+    void _readPacketFromJson(Deck& deck, const nlohmann::json& json, nlohmann::json defaults, DumpEval* dumpEval = nullptr);
+    void _readStoryletsFromJson(Deck& deck, const nlohmann::json& json, nlohmann::json defaults, DumpEval* dumpEval = nullptr);
+
+    // Utility to extract Json stored in a std::any
+    nlohmann::json ExtractJsonFromAny(const std::any& value);
 
     // Utility function to convert nlohmann::json to KeyedMap
     KeyedMap JsonToKeyedMap(const nlohmann::json& json);

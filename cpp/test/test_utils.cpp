@@ -10,7 +10,7 @@
 #include <locale>
 #include <regex>
 
-namespace StoryletFramework {
+namespace StoryletFrameworkTest {
 
 std::string loadTestFile(const std::string& filepath) {
     std::string path = std::filesystem::absolute("../../tests/" + filepath).string();
