@@ -29,18 +29,20 @@ class Storylet:
         self.redraw = REDRAW_ALWAYS
 
         # Updates to context, processed when this storylet is drawn
-        self.update_on_drawn = None
+        self.update_on_played = None
 
         # Precompiled
         self._condition = None
         # Might be absolute value, might be an expression
         self._priority = 0
         # The next draw this should be available
-        self._next_draw = 0
+        self._next_play = 0
+
+        self.deck = None
 
     # Reset the redraw counter
     def reset(self):
-        self._next_draw = 0
+        self._next_play = 0
 
     # Set text of expression. It'll be precompiled
     @property
@@ -93,19 +95,26 @@ class Storylet:
 
     # True if the card is available to draw according to its redraw rules
     def can_draw(self, current_draw):
-        if self.redraw == REDRAW_NEVER and self._next_draw < 0:
+        if self.redraw == REDRAW_NEVER and self._next_play < 0:
             return False
         if self.redraw == REDRAW_ALWAYS:
             return True
-        return current_draw >= self._next_draw
+        return current_draw >= self._next_play
 
     # Call when actually drawn - updates the redraw counter
-    def drawn(self, current_draw):
+    def on_played(self, current_play):
         if self.redraw == REDRAW_NEVER:
-            self._next_draw = -1
+            self._next_play = -1
         else:
-            self._next_draw = current_draw + self.redraw
+            self._next_play = current_play + self.redraw
+        if self.update_on_played:
+            update_context(self.deck.context, self.update_on_played)
     
+    def play(self):
+        if self.deck is None:
+            raise RuntimeError("Storylet not in deck.")
+        self.deck.play(self)
+
 
 class Deck:
     def __init__(self, context={}):
@@ -115,61 +124,87 @@ class Deck:
         # treated as higher priority
         self.use_specificity = False
 
-        # How many storylets to process on each call to update(), if using async reshuffles
-        self.async_reshuffle_count = 10
-
         # Complete set of storylets
         self._all = {}
 
-        # Currently calculated pile
-        self._draw_pile = []
-
         # Keeps a count of the number of draws. Used to keep redraw rules correct.
         # Call reset() to start from scratch.
-        self._current_draw = 0
+        self._current_play = 0
 
         # Context to be used for all expression evaluations.
         self.context = context
 
-        # Used to deal with in-progress reshuffles.
-        self._reshuffle_state = {
-            "callback": None,
-            "to_process": [],
-            "filter": None,
-            "priority_map": {},
-            "dump_eval": None,
-        }
-
     def reset(self):
-        self._current_draw = 0
+        self._current_play = 0
         for storylet in self._all.values():
             storylet.reset()
 
-    def reshuffle(self, filter=None, dump_eval=None):
-        if self.async_reshuffle_in_progress():
-            raise RuntimeError("Async reshuffle in progress, can't call reshuffle()")
+    def draw(self, count=-1, filter=None, dump_eval=None):
+        # Temp map to hold lists by priority
+        priority_map = {}
+        # All the cards to walk
+        to_process = list(self._all.values())
 
-        self._reshuffle_prep(filter, dump_eval)
-        # Reshuffle everything at once
-        self._reshuffle_do_chunk(len(self._reshuffle_state["to_process"]))
-        self._reshuffle_finalize()
+        while len(to_process) > 0:
+            storylet = to_process.pop(0)
 
-    def reshuffle_async(self, callback, filter=None, dump_eval=None):
-        if self.async_reshuffle_in_progress():
-            raise RuntimeError("Async reshuffle in progress, can't call reshuffle_async()")
+            if not storylet.can_draw(self._current_play):
+                # Storylet fails the draw rules - skip
+                continue
 
-        self._reshuffle_state["callback"] = callback
-        self._reshuffle_prep(filter, dump_eval)
+            # Apply filter, if available
+            if filter is not None:
+                if not filter(storylet):
+                    # Storylet fails the filter - skip
+                    continue
 
-    def async_reshuffle_in_progress(self):
-        return self._reshuffle_state["callback"] is not None
+            if not storylet.check_condition(self.context, dump_eval):
+                # Storylet fails the condition - skip
+                continue
 
-    def update(self):
-        # If an async reshuffle is in progress
-        if self.async_reshuffle_in_progress():
-            self._reshuffle_do_chunk(self.async_reshuffle_count)
-            if not self._reshuffle_state["to_process"]:
-                self._reshuffle_finalize()
+            # Get the current priority for the storylet
+            priority = storylet.calc_current_priority(self.context, self.use_specificity, dump_eval)
+
+            if priority not in priority_map:
+                # Does a priority list for this priority value exist in the temp map? If not, make it
+                priority_map[priority] = []
+
+            # Add our card to this priority list
+            priority_map[priority].append(storylet)
+
+        # Now sort all the resultant priorities
+        sorted_priorities = sorted(priority_map.keys(), reverse=True)
+        draw_pile = []
+
+        # Shuffle each set of storylets that are the same priority. Then add them all to the master draw pile.
+        # Result will be - higher priorities will be in the pile at the front, and we go down from there.
+        for priority in sorted_priorities:
+            bucket = priority_map[priority]
+            shuffle_array(bucket)
+            draw_pile.extend(bucket)
+            if count > -1 and len(draw_pile) >= count:
+                break
+
+        return draw_pile[:count] if count > -1 else draw_pile
+
+    def draw_and_play(self, count=-1, filter=None, dump_eval=None):
+        drawn = self.draw(count, filter, dump_eval)
+        for i in range(len(drawn)):
+            drawn[i].play()
+        return drawn
+    
+    def draw_single(self, filter=None, dump_eval=None):
+        drawn = self.draw(1, filter, dump_eval)
+        if len(drawn) == 0:
+            return None
+        return drawn[0]
+    
+    def draw_and_play_single(self, filter=None, dump_eval=None):
+        drawn = self.draw_single(filter, dump_eval)
+        if drawn is None:
+            return None
+        drawn.play()
+        return drawn
 
     def get_storylet(self, id):
         return self._all.get(id)
@@ -178,105 +213,9 @@ class Deck:
         if storylet.id in self._all:
             raise ValueError(f"Storylet with id '{storylet.id}' already exists in the deck.")
         self._all[storylet.id] = storylet
-    
-    def draw(self):
-        if self.async_reshuffle_in_progress():
-            raise RuntimeError("Async reshuffle in progress, can't call draw()")
+        storylet.deck = self
 
-        self._current_draw += 1
-
-        if not self._draw_pile:
-            return None
-
-        storylet = self._draw_pile.pop(0)
-        if storylet.update_on_drawn:
-            update_context(self.context, storylet.update_on_drawn)
-        storylet.drawn(self._current_draw)
-        return storylet
-
-    def draw_hand(self, count, reshuffle_if_needed=False):
-        storylets = []
-        for _ in range(count):
-            if len(self._draw_pile) == 0:
-                if reshuffle_if_needed:
-                    self.reshuffle()
-                else:
-                    break
-
-            storylet = self.draw()
-            if storylet is None:
-                break
-
-            storylets.append(storylet)
-
-        return storylets
-    
-    def _reshuffle_prep(self, filter, dump_eval=None):
-        # Empty the draw pile
-        self._draw_pile = []
-        self._reshuffle_state["dump_eval"] = dump_eval
-        self._reshuffle_state["filter"] = filter
-        # Temp map to hold lists by priority
-        self._reshuffle_state["priority_map"] = {}
-        # All the cards to walk
-        self._reshuffle_state["to_process"] = list(self._all.values())
-
-    def _reshuffle_do_chunk(self, count):
-        number_to_do = min(count, len(self._reshuffle_state["to_process"]))
-
-        while number_to_do > 0:
-            number_to_do -= 1
-
-            storylet = self._reshuffle_state["to_process"].pop(0)
-
-            if not storylet.can_draw(self._current_draw):
-                # Storylet fails the draw rules - skip
-                continue
-
-            # Apply filter, if available
-            if self._reshuffle_state["filter"] is not None:
-                if not self._reshuffle_state["filter"](storylet):
-                    # Storylet fails the filter - skip
-                    continue
-
-            if not storylet.check_condition(self.context, self._reshuffle_state["dump_eval"]):
-                # Storylet fails the condition - skip
-                continue
-
-            # Get the current priority for the storylet
-            priority = storylet.calc_current_priority(
-                self.context, self.use_specificity, self._reshuffle_state["dump_eval"]
-            )
-
-            if priority not in self._reshuffle_state["priority_map"]:
-                # Does a priority list for this priority value exist in the temp map? If not, make it
-                self._reshuffle_state["priority_map"][priority] = []
-
-            # Add our card to this priority list
-            self._reshuffle_state["priority_map"][priority].append(storylet)
-
-    def _reshuffle_finalize(self):
-        # Now sort all the resultant priorities
-        sorted_priorities = sorted(self._reshuffle_state["priority_map"].keys(), reverse=True)
-
-        # Shuffle each set of storylets that are the same priority. Then add them all to the master draw pile.
-        # Result will be - higher priorities will be in the pile at the front, and we go down from there.
-        for priority in sorted_priorities:
-            bucket = self._reshuffle_state["priority_map"][priority]
-            shuffle_array(bucket)
-            self._draw_pile.extend(bucket)
-
-        self._reshuffle_state["priority_map"] = None
-        self._reshuffle_state["to_process"] = []
-        self._reshuffle_state["filter"] = None
-        callback = self._reshuffle_state["callback"]
-        self._reshuffle_state["callback"] = None
-        self._reshuffle_state["dump_eval"] = None
-        if callback:
-            callback()
-
-    def dump_draw_pile(self):
-        if self.async_reshuffle_in_progress():
-            raise RuntimeError("Async reshuffle in progress, can't call dump_draw_pile()")
-
-        return ",".join(storylet.id for storylet in self._draw_pile)
+  # Mark this storylet as played. If it's got an updateOnPlayed, make that happen.
+    def play(self, storylet):
+        self._current_play += 1
+        storylet.on_played(self._current_play)

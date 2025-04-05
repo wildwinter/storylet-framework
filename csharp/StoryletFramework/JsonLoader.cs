@@ -44,9 +44,9 @@ public static class JsonLoader
             storylet.SetPriority(config["priority"]);
         }
 
-        if (config.ContainsKey("updateOnDrawn"))
+        if (config.ContainsKey("updateOnPlayed"))
         {
-            storylet.UpdateOnDrawn = (KeyMap)config["updateOnDrawn"];
+            storylet.UpdateOnPlayed = (KeyMap)config["updateOnPlayed"];
         }
 
         if (config.ContainsKey("content"))
@@ -58,12 +58,10 @@ public static class JsonLoader
     }
 
     // Parse from JSON-like data
-    public static Deck DeckFromJson(ParsedJson json, KeyMap? context = null, bool reshuffle = true, List<string>? dumpEval = null)
+    public static Deck DeckFromJson(ParsedJson json, KeyMap? context = null, List<string>? dumpEval = null)
     {
         var deck = new Deck(context);
         ReadPacketFromJson(deck, json, new KeyMap(), dumpEval);
-        if (reshuffle)
-            deck.Reshuffle(null, dumpEval);
         return deck;
     }
 

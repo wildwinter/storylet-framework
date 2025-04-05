@@ -26,18 +26,16 @@ def storylet_from_json(json, defaults):
         storylet.condition = config["condition"]
     if "priority" in config:
         storylet.priority = config["priority"]
-    if "updateOnDrawn" in config:
-        storylet.update_on_drawn = config["updateOnDrawn"]
+    if "updateOnPlayed" in config:
+        storylet.update_on_played = config["updateOnPlayed"]
     if "content" in config:
         storylet.content = config["content"]
 
     return storylet
 
-def deck_from_json(json, context={}, reshuffle=True, dump_eval=None):
+def deck_from_json(json, context={}, dump_eval=None):
     deck = Deck(context)
     _read_packet_from_json(deck, json, {}, dump_eval)
-    if reshuffle:
-        deck.reshuffle(None, dump_eval)
     return deck
 
 def _read_packet_from_json(deck, json, defaults, dump_eval=None):

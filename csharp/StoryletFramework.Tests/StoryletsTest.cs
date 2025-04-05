@@ -11,13 +11,11 @@ public class StoryletsTest
         var dumpEval = new List<string>();
 
         var json = TestUtils.LoadJsonFile("Streets.jsonc");
-        var deck = JsonLoader.DeckFromJson(json, new Dictionary<string, object>(), true, dumpEval);
+        var deck = JsonLoader.DeckFromJson(json, new Dictionary<string, object>(), dumpEval);
 
-        var card = deck.Draw();
-        Assert.NotNull(card);
-
-        card = deck.Draw();
-        Assert.NotNull(card);
+        var cards = deck.DrawAndPlay(2);
+        Assert.NotNull(cards[0]);
+        Assert.NotNull(cards[1]);
 
         Console.WriteLine(string.Join('\n', dumpEval));
     }
@@ -40,7 +38,7 @@ public class StoryletsTest
         // Uncomment the following line to debug the draw pile
         // Console.WriteLine(barks.DumpDrawPile());
     
-        var card = barks.Draw();
+        var card = barks.DrawAndPlaySingle();
         Assert.NotNull(card);
     }
 
@@ -83,12 +81,8 @@ public class StoryletsTest
         {
             SetStreet(street);
 
-            // Shuffle the encounters deck to only include relevant cards
-            encounters.Reshuffle();
-            // Uncomment the following line to debug the draw pile
-            // Console.WriteLine(encounters.DumpDrawPile());
 
-            var encounter = encounters.Draw();
+            var encounter = encounters.DrawAndPlaySingle();
             context["encounter_tag"] = new Func<string, bool>(tag =>
             {
                 if ( encounter==null || !encounter.Content?.ContainsKey("tags"))
@@ -98,11 +92,7 @@ public class StoryletsTest
 
             Console.WriteLine($"  Encounter: \"{encounter?.Content?["title"]}\"");
 
-            barks.Reshuffle();
-            // Uncomment the following line to debug the draw pile
-            // Console.WriteLine(barks.DumpDrawPile());
-
-            var bark = barks.Draw();
+            var bark = barks.DrawAndPlaySingle();
             if (bark != null)
             {
                 Console.WriteLine($"  Comment: \"{bark.Content?["comment"]}\"");
@@ -110,7 +100,7 @@ public class StoryletsTest
         }
 
         // First encounter - this should pull out a "start" location
-        streets.Reshuffle(street => { 
+        var street = streets.DrawAndPlaySingle(street => { 
             if (street.Content?.ContainsKey("tags")) {
                 var tags = street.Content?["tags"];
                 if (tags is List<string>) {
@@ -119,21 +109,21 @@ public class StoryletsTest
             }
             return false;
         });
-        var street = streets.Draw();
         Assert.NotNull(street);
         DoEncounter(street);
 
         Assert.True(street.Id == "docks" || street.Id == "market" || street.Id == "bridge");
 
         // Reshuffle the deck so that all streets are fair game
-        streets.Reshuffle();
+        var streetsDrawn = streets.Draw();
 
         var path = new List<string>();
 
         // Walk through the street deck and pull an encounter for each location
-        for (int i = 0; i < 11; i++)
+        for (int i=0;i<streetsDrawn.Count;i++)
         {
-            street = streets.Draw();
+            street = streetsDrawn[i];
+            street.Play();
             Assert.NotNull(street);
             path.Add(street.Id);
             DoEncounter(street);
@@ -141,81 +131,4 @@ public class StoryletsTest
 
         Assert.True(path.Contains("market") || path.Contains("slums") || path.Contains("bridge"));
     }
-
-    [Fact]
-    public void AsyncReshuffleTest()
-    {
-        // Define the context as a Dictionary<string, object>
-        var context = new Dictionary<string, object>
-        {
-            { "street_id", "" },
-            { "street_wealth", 1 },
-            { "encounter_tag", new Func<string, bool>(tag => false) }
-        };
-    
-        // Load the JSON file and create a Deck without reshuffling
-        var json = TestUtils.LoadJsonFile("Barks.jsonc");
-        var barks = JsonLoader.DeckFromJson(json, context, reshuffle: false);
-    
-        // Perform an asynchronous reshuffle
-        var dumpEval = new List<string>();
-        
-        barks.ReshuffleAsync(() => Console.WriteLine("Async reshuffle complete."), null, dumpEval);
-
-        // Wait for the reshuffle to complete
-        while (barks.AsyncReshuffleInProgress())
-        {
-            barks.Update();
-        }
-
-        // Uncomment the following line to debug the draw pile
-        //Console.WriteLine(barks.DumpDrawPile());
-    
-        // Draw the first card and assert its ID
-        var card = barks.Draw();
-        Assert.NotNull(card);
-        Assert.Equal("welcome", card.Id);
-    
-        // Draw another card and assert it is not null
-        card = barks.Draw();
-        Assert.NotNull(card);
-    
-        // Uncomment the following line to debug the evaluation steps
-        // Console.WriteLine(string.Join('\n', dumpEval));
-    }
-
-        [Fact]
-        public void DrawHandTest()
-        {
-            // Define the context as a Dictionary<string, object>
-            var context = new Dictionary<string, object>
-            {
-                { "street_id", "" },
-                { "street_wealth", 1 },
-                { "encounter_tag", new Func<string, bool>(tag => true) }
-            };
-        
-            // Load the JSON file and create a Deck
-            var json = TestUtils.LoadJsonFile("Barks.jsonc");
-            var deck = JsonLoader.DeckFromJson(json, context, reshuffle: true);
-        
-            // Draw a hand of 10 cards and assert the length is not 10
-            var drawn = deck.DrawHand(10);
-            Assert.NotEqual(10, drawn.Count);
-        
-            // Reset the deck and draw a hand of 10 cards with reshuffling
-            deck.Reset();
-            drawn = deck.DrawHand(10, reshuffleIfNeeded: true);
-            Assert.Equal(10, drawn.Count);
-            Assert.Equal("welcome", drawn[0].Id);
-        
-            // Uncomment the following lines for debugging
-            // for (int i = 0; i < drawn.Count; i++)
-            // {
-            //     Console.WriteLine($"Card {i}: {drawn[i].Id}");
-            // }
-        
-            // Uncomment to debug the evaluation steps
-            // Console.WriteLine(string.Join('\n', dumpEval));
-        }
 }

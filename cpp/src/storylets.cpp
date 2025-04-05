@@ -5,6 +5,7 @@
 
  #include "storylet_framework/context.h"
  #include "storylet_framework/storylets.h"
+  #include "storylet_framework/utils.h"
  #include <stdexcept>
  #include <iostream>
  
@@ -18,7 +19,7 @@
      // Reset the redraw counter
      void Storylet::Reset()
      {
-         _nextDraw = 0;
+         _nextPlay = 0;
      }
  
      // Set condition as a precompiled expression
@@ -93,25 +94,38 @@
      // Check if the storylet is available to draw
      bool Storylet::CanDraw(int currentDraw) const
      {
-         if (redraw == REDRAW_NEVER && _nextDraw < 0)
+         if (redraw == REDRAW_NEVER && _nextPlay < 0)
              return false;
          if (redraw == REDRAW_ALWAYS)
              return true;
-         return currentDraw >= _nextDraw;
+         return currentDraw >= _nextPlay;
      }
  
      // Call when actually drawn - updates the redraw counter
-     void Storylet::Drawn(int currentDraw)
+    void Storylet::OnPlayed(int currentDraw, Context& context)
      {
-         if (redraw == REDRAW_NEVER)
-         {
-             _nextDraw = -1;
-         }
-         else
-         {
-             _nextDraw = currentDraw + redraw;
-         }
-     }
+        if (redraw == REDRAW_NEVER)
+        {
+            _nextPlay = -1;
+        }
+        else
+        {
+            _nextPlay = currentDraw + redraw;
+        }
+        if (!updateOnPlayed.empty())
+        {
+            ContextUtils::UpdateContext(context, updateOnPlayed);
+        }
+    }
+
+    void Storylet::Play() {
+        if (!_deck)
+        {
+            throw std::runtime_error("Storylet not part of a deck");
+            
+        }
+        _deck->Play(*this);
+    }
 
     Deck::Deck() {
         this->context = std::make_shared<Context>();
@@ -132,38 +146,90 @@
         }
     }
 
-    void Deck::Reshuffle(std::function<bool(const Storylet&)> filter, DumpEval* dumpEval)
+    std::vector<std::shared_ptr<Storylet>> Deck::Draw(int count, std::function<bool(const Storylet&)> filter, DumpEval* dumpEval)
     {
-        if (AsyncReshuffleInProgress())
-            throw std::runtime_error("Async reshuffle in progress, can't call Reshuffle()");
+        std::unordered_map<int, std::vector<std::shared_ptr<Storylet>>> priorityMap;
+        std::vector<std::shared_ptr<Storylet>> toProcess;
 
-        _reshufflePrep(filter, dumpEval);
-        _reshuffleDoChunk(_reshuffleState.toProcess.size());
-        _reshuffleFinalise();
-    }
-
-    void Deck::ReshuffleAsync(std::function<void()> callback, std::function<bool(const Storylet&)> filter, DumpEval* dumpEval)
-    {
-        if (AsyncReshuffleInProgress())
-            throw std::runtime_error("Async reshuffle in progress, can't call ReshuffleAsync()");
-
-        _reshuffleState.callback = callback;
-        _reshufflePrep(filter, dumpEval);
-    }
-
-    bool Deck::AsyncReshuffleInProgress() const
-    {
-        return _reshuffleState.callback != nullptr;
-    }
-
-    void Deck::Update()
-    {
-        if (AsyncReshuffleInProgress())
+        for (auto& [id, storylet] : _all)
         {
-            _reshuffleDoChunk(asyncReshuffleCount);
-            if (_reshuffleState.toProcess.empty())
-                _reshuffleFinalise();
+            toProcess.push_back(storylet);
         }
+
+        while (toProcess.size() > 0)
+        {
+            std::shared_ptr<Storylet> storylet = toProcess.front();
+            toProcess.erase(toProcess.begin());
+
+            if (!storylet->CanDraw(_currentDraw))
+                continue;
+
+            if (filter && !filter(*storylet))
+                continue;
+
+            if (!storylet->CheckCondition(*context, dumpEval))
+                continue;
+
+            int priority = storylet->CalcCurrentPriority(*context, useSpecificity, dumpEval);
+
+            if (!priorityMap.contains(priority))
+            {
+                priorityMap[priority] = std::vector<std::shared_ptr<Storylet>>();
+            }
+
+            priorityMap[priority].push_back(storylet);
+        }
+        
+        std::vector<int> sortedPriorities;
+        for (const auto& [priority, _] : priorityMap)
+        {
+            sortedPriorities.push_back(priority);
+        }
+        std::sort(sortedPriorities.begin(), sortedPriorities.end(), std::greater<int>());
+        std::vector<std::shared_ptr<Storylet>> drawPile;
+
+        for (int priority : sortedPriorities)
+        {
+            auto& bucket = priorityMap[priority];
+            Utils::ShuffleArray(bucket);
+            for (std::shared_ptr<Storylet> storylet : bucket)
+            {
+                drawPile.push_back(storylet);
+                if (count>-1 && drawPile.size() >= count)
+                {
+                    break;
+                }
+            }
+        }
+        return drawPile;
+    }
+
+    std::vector<std::shared_ptr<Storylet>> Deck::DrawAndPlay(int count, std::function<bool(const Storylet&)> filter, DumpEval* dumpEval) {
+        std::vector<std::shared_ptr<Storylet>> drawPile = Draw(count, filter, dumpEval);
+        for (auto& storylet : drawPile)
+        {
+            Play(*storylet);
+        }
+        return drawPile;
+    }
+
+    std::shared_ptr<Storylet> Deck::DrawSingle(std::function<bool(const Storylet&)> filter, DumpEval* dumpEval) {
+        std::vector<std::shared_ptr<Storylet>> drawPile = Draw(1, filter, dumpEval);
+        if (drawPile.size() > 0)
+        {
+            return drawPile[0];
+        }
+        return nullptr;
+    }
+
+    std::shared_ptr<Storylet> Deck::DrawAndPlaySingle(std::function<bool(const Storylet&)> filter, DumpEval* dumpEval) {
+        std::vector<std::shared_ptr<Storylet>> drawPile = Draw(1, filter, dumpEval);
+        if (drawPile.size() > 0)
+        {
+            Play(*drawPile[0]);
+            return drawPile[0];
+        }
+        return nullptr;
     }
 
     std::shared_ptr<Storylet> Deck::GetStorylet(const std::string& id) const {
@@ -178,135 +244,11 @@
         if (_all.find(storylet->id) != _all.end())
             throw std::invalid_argument("Duplicate storylet id: " + storylet->id);
         _all[storylet->id] = storylet;
+        storylet->_deck = this;
     }
 
-    std::string Deck::DumpDrawPile() const
-    {
-        if (AsyncReshuffleInProgress())
-            throw std::runtime_error("Async reshuffle in progress, can't call DumpDrawPile()");
-
-        std::string result;
-        for (const auto& storylet : _drawPile)
-        {
-            result += storylet->id + ",";
-        }
-        if (!result.empty())
-            result.pop_back(); // Remove trailing comma
-        return result;
-    }
-
-    std::shared_ptr<Storylet> Deck::Draw()
-    {
-        if (AsyncReshuffleInProgress())
-            throw std::runtime_error("Async reshuffle in progress, can't call Draw()");
-
+    void Deck::Play(Storylet& storylet) {
         _currentDraw++;
-
-        if (_drawPile.empty())
-            return nullptr;
-
-        std::shared_ptr<Storylet> storylet = _drawPile.front();
-        _drawPile.erase(_drawPile.begin());
-
-        if (!storylet->updateOnDrawn.empty())
-        {
-            ContextUtils::UpdateContext(*context, storylet->updateOnDrawn);
-        }
-
-        storylet->Drawn(_currentDraw);
-        return storylet;
-    }
-
-    std::vector<std::shared_ptr<Storylet>> Deck::DrawHand(int count, bool reshuffleIfNeeded) {
-        std::vector<std::shared_ptr<Storylet>> storylets;
-    
-        for (int i = 0; i < count; i++) {
-            if (_drawPile.empty()) {
-                if (reshuffleIfNeeded) {
-                    Reshuffle(nullptr, nullptr);
-                } else {
-                    break;
-                }
-            }
-    
-            auto storylet = Draw();
-            if (!storylet) {
-                break;
-            }
-    
-            storylets.push_back(storylet);
-        }
-    
-        return storylets;
-    }
-
-    void Deck::_reshufflePrep(std::function<bool(const Storylet&)> filter, DumpEval* dumpEval)
-    {
-        _drawPile.clear();
-        _reshuffleState.dumpEval = dumpEval;
-        _reshuffleState.filter = filter;
-        _reshuffleState.priorityMap.clear();
-        _reshuffleState.toProcess.clear();
-
-        for (auto& [id, storylet] : _all)
-        {
-            _reshuffleState.toProcess.push_back(storylet);
-        }
-    }
-
-    void Deck::_reshuffleDoChunk(size_t count)
-    {
-        size_t numberToDo = std::min(count, _reshuffleState.toProcess.size());
-
-        while (numberToDo > 0)
-        {
-            numberToDo--;
-
-            std::shared_ptr<Storylet> storylet = _reshuffleState.toProcess.front();
-            _reshuffleState.toProcess.erase(_reshuffleState.toProcess.begin());
-
-            if (!storylet->CanDraw(_currentDraw))
-                continue;
-
-            if (_reshuffleState.filter && !_reshuffleState.filter(*storylet))
-                continue;
-
-            if (!storylet->CheckCondition(*context, _reshuffleState.dumpEval))
-                continue;
-
-            int priority = storylet->CalcCurrentPriority(*context, useSpecificity, _reshuffleState.dumpEval);
-
-            _reshuffleState.priorityMap[priority].push_back(storylet);
-        }
-    }
-
-    void Deck::_reshuffleFinalise()
-    {
-        std::vector<int> sortedPriorities;
-        for (const auto& [priority, _] : _reshuffleState.priorityMap)
-        {
-            sortedPriorities.push_back(priority);
-        }
-        std::sort(sortedPriorities.begin(), sortedPriorities.end(), std::greater<int>());
-
-        for (int priority : sortedPriorities)
-        {
-            auto& bucket = _reshuffleState.priorityMap[priority];
-            std::shuffle(bucket.begin(), bucket.end(), std::mt19937{std::random_device{}()});
-            for (std::shared_ptr<Storylet> storylet : bucket)
-            {
-                _drawPile.push_back(storylet);
-            }
-        }
-
-        _reshuffleState.priorityMap.clear();
-        _reshuffleState.toProcess.clear();
-        _reshuffleState.filter = nullptr;
-
-        if (_reshuffleState.callback)
-        {
-            _reshuffleState.callback();
-            _reshuffleState.callback = nullptr;
-        }
+        storylet.OnPlayed(_currentDraw, *context);
     }
  }

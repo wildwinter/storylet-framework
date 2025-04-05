@@ -37,7 +37,7 @@
             "id": "noble",
             "redraw": "never",
             "condition": "street_wealth>=0",
-            "updateOnDrawn": {"noble_storyline":1},
+            "updateOnPlayed": {"noble_storyline":1},
             "content": { 
                 "title": "Meeting with Noble",
                 "tags": ["wealth"]
@@ -46,7 +46,7 @@
         {
             "id": "noble_castle_street",
             "condition": "street_id=='castlestreet' and noble_storyline>0",
-            "updateOnDrawn": {"noble_storyline":"noble_storyline+1"},
+            "updateOnPlayed": {"noble_storyline":"noble_storyline+1"},
             "content": { "title": "Another Meeting with Noble - on Castle Street", "tags": ["wealth"]}
         }
     ]

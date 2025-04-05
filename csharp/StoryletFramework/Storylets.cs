@@ -7,6 +7,9 @@ using ExpressionParser;
 
 namespace StoryletFramework;
 
+using Context = Dictionary<string, object>;
+using KeyMap = Dictionary<string, object>;
+
 public class Storylet
 {
     private static readonly Parser expressionParser = new Parser();
@@ -20,14 +23,16 @@ public class Storylet
     public int Redraw { get; set; } = REDRAW_ALWAYS;
 
     // Updates to context when drawn
-    public Dictionary<string, object>? UpdateOnDrawn { get; set; }
+    public KeyMap? UpdateOnPlayed { get; set; }
 
     // Precompiled condition and priority
     private ExpressionNode? _condition;
     private object _priority = 0;
 
     // The next draw this should be available
-    private int _nextDraw = 0;
+    private int _nextPlay = 0;
+
+    internal Deck? deck = null;
 
     public Storylet(string id)
     {
@@ -37,7 +42,7 @@ public class Storylet
     // Reset the redraw counter
     public void Reset()
     {
-        _nextDraw = 0;
+        _nextPlay = 0;
     }
 
     // Set condition as a precompiled expression
@@ -51,7 +56,7 @@ public class Storylet
     }
 
     // Evaluate condition using the current context. Returns true if no condition is set.
-    public bool CheckCondition(Dictionary<string, object> context, List<string>? dumpEval = null)
+    public bool CheckCondition(Context context, List<string>? dumpEval = null)
     {
         if (_condition == null)
             return true;
@@ -78,7 +83,7 @@ public class Storylet
     }
 
     // Evaluate priority using the current context
-    public int CalcCurrentPriority(Dictionary<string, object> context, bool useSpecificity = true, List<string>? dumpEval = null)
+    public int CalcCurrentPriority(Context context, bool useSpecificity = true, List<string>? dumpEval = null)
     {
         int workingPriority = 0;
 
@@ -105,93 +110,136 @@ public class Storylet
     }
 
     // Check if the storylet is available to draw based on redraw rules
-    public bool CanDraw(int currentDraw)
+    public bool CanDraw(int currentPlay)
     {
-        if (Redraw == REDRAW_NEVER && _nextDraw < 0)
+        if (Redraw == REDRAW_NEVER && _nextPlay < 0)
             return false;
         if (Redraw == REDRAW_ALWAYS)
             return true;
-        return currentDraw >= _nextDraw;
+        return currentPlay >= _nextPlay;
     }
 
     // Update the redraw counter when the storylet is drawn
-    public void Drawn(int currentDraw)
+    internal void OnPlayed(int currentDraw, Context context)
     {
         if (Redraw == REDRAW_NEVER)
         {
-            _nextDraw = -1;
+            _nextPlay = -1;
         }
         else
         {
-            _nextDraw = currentDraw + Redraw;
+            _nextPlay = currentDraw + Redraw;
+        }
+        if (UpdateOnPlayed != null) {
+            ContextUtils.UpdateContext(context, UpdateOnPlayed);
         }
     }
+
+      // Convenience. Play the storylet. Updates draw counters and applies any updateOnPlayed
+    public void Play() {
+        if (deck == null) {
+            throw new Exception("Storylet not in deck.");
+        }
+        deck.Play(this);
+    }
+
 }
 
 public class Deck
 {
     public bool UseSpecificity { get; set; } = false;
-    public int AsyncReshuffleCount { get; set; } = 10;
-
     private readonly Dictionary<string, Storylet> _all = new();
-    private readonly List<Storylet> _drawPile = new();
-    private int _currentDraw = 0;
-    public readonly Dictionary<string, object> Context;
+    private int _currentPlay = 0;
+    public readonly Context Context;
 
-    private ReshuffleState _reshuffleState = new();
-
-    public Deck(Dictionary<string, object>? context = null)
+    public Deck(Context? context = null)
     {
-        Context = context ?? new Dictionary<string, object>();
+        Context = context ?? new Context();
     }
 
     // Reset the whole deck, including all redraw counters
     public void Reset()
     {
-        _currentDraw = 0;
+        _currentPlay = 0;
         foreach (var storylet in _all.Values)
         {
             storylet.Reset();
         }
     }
 
-    // Reshuffle the deck
-    public void Reshuffle(Func<Storylet, bool>? filter = null, List<string>? dumpEval = null)
+    // Reshuffle and draw from the deck
+    public List<Storylet> Draw(int count = -1, Func<Storylet, bool>? filter = null, List<string>? dumpEval = null)
     {
-        if (AsyncReshuffleInProgress())
-            throw new InvalidOperationException("Async reshuffle in progress, can't call Reshuffle().");
+        var priorityMap = new SortedDictionary<int, List<Storylet>>(Comparer<int>.Create((a, b) => b.CompareTo(a)));
+        var toProcess = _all.Values.ToList();
 
-        ReshufflePrep(filter, dumpEval);
-        ReshuffleDoChunk(_reshuffleState.ToProcess.Count);
-        ReshuffleFinalize();
-    }
-
-    // Start an async reshuffle
-    public void ReshuffleAsync(Action callback, Func<Storylet, bool>? filter = null, List<string>? dumpEval = null)
-    {
-        if (AsyncReshuffleInProgress())
-            throw new InvalidOperationException("Async reshuffle in progress, can't call ReshuffleAsync().");
-
-        ReshufflePrep(filter, dumpEval);
-        _reshuffleState.Callback = callback;
-    }
-
-    public bool AsyncReshuffleInProgress()
-    {
-        return _reshuffleState.Callback != null;
-    }
-
-    // Update the reshuffle process
-    public void Update()
-    {
-        if (AsyncReshuffleInProgress())
+        while (toProcess.Count > 0)  
         {
-            ReshuffleDoChunk(AsyncReshuffleCount);
-            if (_reshuffleState.ToProcess.Count == 0)
+            var storylet = toProcess[0];
+            toProcess.RemoveAt(0);
+
+            if (!storylet.CanDraw(_currentPlay))
+                continue;
+
+            if (filter != null && !filter(storylet))
+                continue;
+
+            if (!storylet.CheckCondition(Context, dumpEval))
+                continue;
+
+            var priority = storylet.CalcCurrentPriority(Context, UseSpecificity, dumpEval);
+
+            if (!priorityMap.ContainsKey(priority))
             {
-                ReshuffleFinalize();
+                priorityMap[priority] = new List<Storylet>();
+            }
+
+            priorityMap[priority].Add(storylet);
+        }
+
+        var drawPile = new List<Storylet>();
+
+        foreach (var bucket in priorityMap.Values)
+        {
+            Utils.ShuffleArray(bucket);
+            drawPile.AddRange(bucket);
+            if (count>-1 && drawPile.Count >= count)
+            {
+                break;
             }
         }
+
+        return count > -1 ? [.. drawPile.Take(count)] : drawPile;
+    }
+
+    public List<Storylet> DrawAndPlay(int count = -1, Func<Storylet, bool>? filter = null, List<string>? dumpEval = null)
+    {
+        var drawPile = Draw(count, filter, dumpEval);
+        foreach (var storylet in drawPile)
+        {
+            Play(storylet);
+        }
+        return drawPile;
+    }
+
+    public Storylet? DrawSingle(Func<Storylet, bool>? filter = null, List<string>? dumpEval = null)
+    {
+        var drawPile = Draw(1, filter, dumpEval);
+        if (drawPile.Count > 0)
+        {
+            return drawPile[0];
+        }
+        return null;
+    }
+
+    public Storylet? DrawAndPlaySingle(Func<Storylet, bool>? filter = null, List<string>? dumpEval = null)
+    {
+        var storylet = DrawSingle(filter, dumpEval);
+        if (storylet != null)
+        {
+            Play(storylet);
+        }
+        return storylet;
     }
 
     public Storylet? GetStorylet(string id)
@@ -209,130 +257,11 @@ public class Deck
             throw new ArgumentException($"Duplicate storylet id: '{storylet.Id}'.");
 
         _all[storylet.Id] = storylet;
+        storylet.deck = this;
     }
 
-    private void ReshufflePrep(Func<Storylet, bool>? filter, List<string>? dumpEval = null)
-    {
-        _drawPile.Clear();
-        _reshuffleState = new ReshuffleState
-        {
-            DumpEval = dumpEval,
-            Filter = filter,
-            PriorityMap = new SortedDictionary<int, List<Storylet>>(Comparer<int>.Create((a, b) => b.CompareTo(a))),
-            ToProcess = _all.Values.ToList()
-        };
-    }
-
-    private void ReshuffleDoChunk(int count)
-    {
-        var numberToDo = Math.Min(count, _reshuffleState.ToProcess.Count);
-
-        while (numberToDo > 0)
-        {
-            numberToDo--;
-
-            var storylet = _reshuffleState.ToProcess[0];
-            _reshuffleState.ToProcess.RemoveAt(0);
-
-            if (!storylet.CanDraw(_currentDraw))
-                continue;
-
-            if (_reshuffleState.Filter != null && !_reshuffleState.Filter(storylet))
-                continue;
-
-            if (!storylet.CheckCondition(Context, _reshuffleState.DumpEval))
-                continue;
-
-            var priority = storylet.CalcCurrentPriority(Context, UseSpecificity, _reshuffleState.DumpEval);
-
-            if (!_reshuffleState.PriorityMap.ContainsKey(priority))
-            {
-                _reshuffleState.PriorityMap[priority] = new List<Storylet>();
-            }
-
-            _reshuffleState.PriorityMap[priority].Add(storylet);
-        }
-    }
-
-    private void ReshuffleFinalize()
-    {
-        foreach (var bucket in _reshuffleState.PriorityMap.Values)
-        {
-            Utils.ShuffleArray(bucket);
-            _drawPile.AddRange(bucket);
-        }
-
-        _reshuffleState = new ReshuffleState();
-    }
-
-    // Draw the next storylet from the draw pile
-    public Storylet? Draw()
-    {
-        if (AsyncReshuffleInProgress())
-            throw new InvalidOperationException("Async reshuffle in progress, can't call Draw().");
-
-        _currentDraw++;
-
-        if (_drawPile.Count == 0)
-            return null;
-
-        var storylet = _drawPile[0];
-        _drawPile.RemoveAt(0);
-
-        if (storylet.UpdateOnDrawn != null)
-        {
-            ContextUtils.UpdateContext(Context, storylet.UpdateOnDrawn);
-        }
-
-        storylet.Drawn(_currentDraw);
-        return storylet;
-    }
-
-    public List<Storylet> DrawHand(int count, bool reshuffleIfNeeded = false)
-    {
-        var storylets = new List<Storylet>();
-    
-        for (int i = 0; i < count; i++)
-        {
-            if (_drawPile.Count == 0)
-            {
-                if (reshuffleIfNeeded)
-                {
-                    Reshuffle();
-                }
-                else
-                {
-                    break;
-                }
-            }
-    
-            var storylet = Draw();
-            if (storylet == null)
-            {
-                break;
-            }
-    
-            storylets.Add(storylet);
-        }
-    
-        return storylets;
-    }
-
-    // For debugging: Dump the IDs of the current draw pile
-    public string DumpDrawPile()
-    {
-        if (AsyncReshuffleInProgress())
-            throw new InvalidOperationException("Async reshuffle in progress, can't call DumpDrawPile().");
-
-        return string.Join(",", _drawPile.Select(s => s.Id));
-    }
-
-    private class ReshuffleState
-    {
-        public Action? Callback { get; set; }
-        public List<Storylet> ToProcess { get; set; } = new();
-        public Func<Storylet, bool>? Filter { get; set; }
-        public SortedDictionary<int, List<Storylet>> PriorityMap { get; set; } = new();
-        public List<string>? DumpEval { get; set; }
+    public void Play(Storylet storylet) {
+        _currentPlay++;
+        storylet.OnPlayed(_currentPlay, Context);
     }
 }

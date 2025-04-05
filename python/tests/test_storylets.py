@@ -20,14 +20,11 @@ class TestStorylets(unittest.TestCase):
         dump_eval = []
     
         json_data = load_json_file("Streets.jsonc")
-        deck = deck_from_json(json_data, {}, True, dump_eval)
-    
-        card = deck.draw()
-        self.assertIsNotNone(card)
-    
-        card = deck.draw()
-        self.assertIsNotNone(card)
-    
+        deck = deck_from_json(json_data, {}, dump_eval)
+        drawn = deck.draw_and_play(2)
+        self.assertIsNotNone(drawn.pop(0))
+        self.assertIsNotNone(drawn.pop(0))
+
         print("\n".join(dump_eval))
 
 
@@ -40,7 +37,7 @@ class TestStorylets(unittest.TestCase):
     
         barks = deck_from_json(load_json_file("Barks.jsonc"), context)
         #print(barks.dump_draw_pile())
-        self.assertIsNotNone(barks.draw())
+        self.assertIsNotNone(barks.draw_and_play_single())
 
     def test_street_system(self):
         context = {
@@ -62,89 +59,28 @@ class TestStorylets(unittest.TestCase):
     
         def do_encounter(street):
             set_street(street)
-            # We're on a new street, so shuffle the encounters deck to only include relevant cards.
-            encounters.reshuffle()
-            # print(encounters.dump_draw_pile())
-            encounter = encounters.draw()
+            encounter = encounters.draw_and_play_single()
             context["encounter_tag"] = lambda tag: tag in encounter.content.get("tags", [])
             print(f'  Encounter: "{encounter.content["title"]}"')
-            barks.reshuffle()
-            # print(barks.dump_draw_pile())
-            bark = barks.draw()
+            bark = barks.draw_and_play_single()
             if bark:
                 print(f'  Comment: "{bark.content["comment"]}"')
     
         # First encounter - this should pull out a "start" location.
-        streets.reshuffle(lambda street: "start" in street.content["tags"])
-        street = streets.draw()
+        street = streets.draw_and_play_single(lambda street: "start" in street.content["tags"])
         do_encounter(street)
     
         self.assertIn(street.id, ["docks", "market", "bridge"])
     
         # Reshuffle the deck so that all streets are fair game.
-        streets.reshuffle()
+        streets_drawn = streets.draw()
     
         path = []
     
         # Walk through the street deck and pull an encounter for each location
-        for _ in range(11):
-            street = streets.draw()
+        for street in streets_drawn:
+            street.play()
             path.append(street.id)
             do_encounter(street)
     
         self.assertTrue(any(street_id in ["market", "slums", "bridge"] for street_id in path))
-
-    def test_aysnc_reshuffles(self):
-        dump_eval = []
-    
-        context = {
-            "street_id": "",
-            "street_wealth": 1,
-            "encounter_tag": lambda tag: False
-        }
-    
-        barks = deck_from_json(load_json_file("Barks.jsonc"), context, reshuffle=False)
-        barks.reshuffle_async(lambda: print("Async reshuffle complete."), None, dump_eval)
-    
-        while barks.async_reshuffle_in_progress():
-            barks.update()
-    
-        #print(barks.dump_draw_pile())
-    
-        card = barks.draw()
-        self.assertEqual(card.id, "welcome")
-    
-        card = barks.draw()
-        self.assertIsNotNone(card)
-    
-        #print("\n".join(dump_eval))
-
-    def test_draw_hand(self):
-        dump_eval = []
-
-        context = {
-            "street_id": "",
-            "street_wealth": 1,
-            "encounter_tag": lambda tag: True
-        }
-
-        # Load the JSON file and create a Deck
-        json_data = load_json_file("Barks.jsonc")
-        deck = deck_from_json(json_data, context, reshuffle=True, dump_eval=dump_eval)
-
-        # Draw a hand of 10 cards and assert the length is not 10
-        drawn = deck.draw_hand(10)
-        self.assertNotEqual(len(drawn), 10)
-
-        # Reset the deck and draw a hand of 10 cards with reshuffling
-        deck.reset()
-        drawn = deck.draw_hand(10, reshuffle_if_needed=True)
-        self.assertEqual(len(drawn), 10)
-        self.assertEqual(drawn[0].id, "welcome")
-
-        # Uncomment the following lines for debugging
-        # for i, card in enumerate(drawn):
-        #     print(f"Card {i}: {card.id}")
-
-        # Uncomment to debug the evaluation steps
-        # print("\n".join(dump_eval))

@@ -13,13 +13,11 @@ describe('Storylets', () => {
       let dump_eval = [];
 
       const json = loadJsonFile("Streets.jsonc");
-      const deck = deckFromJson(json, {}, true, dump_eval);
+      const deck = deckFromJson(json, {}, dump_eval);
 
-      let card = deck.draw();
-      assert.notEqual(null, card);
-
-      card = deck.draw();
-      assert.notEqual(null, card);
+      const drawn = deck.drawAndPlay(2);
+      assert.notEqual(null, drawn.shift());
+      assert.notEqual(null, drawn.shift());
 
       console.log(dump_eval.join('\n'));
 
@@ -35,7 +33,7 @@ describe('Storylets', () => {
 
       const barks = deckFromJson(loadJsonFile("Barks.jsonc"), context);
       //console.log(barks.dumpDrawPile());
-      assert.notEqual(null, barks.draw());
+      assert.notEqual(null, barks.drawAndPlaySingle());
     });
 
     it('testing street system', () => {
@@ -61,38 +59,34 @@ describe('Storylets', () => {
       let doEncounter = (street) => {
         setStreet(street);
         // We're on a new street, so shuffle the encounters deck to only include relevant cards.
-        encounters.reshuffle();
-        //console.log(encounters.dumpDrawPile());
-        let encounter = encounters.draw();
+        let encounter = encounters.drawAndPlaySingle();
         context.encounter_tag = (tag) => {
           if (!encounter.content.tags)
             return false;
           return encounter.content.tags.includes(tag);
         };
         console.log(`  Encounter: "${encounter.content.title}"`);
-        barks.reshuffle();
-        //console.log(barks.dumpDrawPile());
-        let bark = barks.draw();
+        let bark = barks.drawAndPlaySingle();
         if (bark) {
           console.log(`  Comment: "${bark.content.comment}"`);
         }
       }
 
       // First encounter - this should pull out a "start" location.
-      streets.reshuffle((street)=>{return street.content.tags.includes("start")});
-      let street = streets.draw();
+      let street = streets.drawAndPlaySingle((street)=>{return street.content.tags.includes("start")});
       doEncounter(street);
 
       assert.equal(true, street.id=="docks"||street.id=="market"||street.id=="bridge");
 
       // Reshuffle the deck so that all streets are fair game.
-      streets.reshuffle();
+      let streetsDrawn = streets.draw();
 
       let path = [];
 
       // Walk through the street deck and pull an encounter for each location
-      for (let i=0;i<11;i++) {
-          street = streets.draw();
+      for (let i=0;i<streetsDrawn.length;i++) {
+          street = streetsDrawn[i];
+          street.play();
           path.push(street.id);
           doEncounter(street);
       }
@@ -102,69 +96,4 @@ describe('Storylets', () => {
 
   });  
 
-  describe('AsyncReshuffles', () => {
-    it('basic async', () => {
-
-      let dump_eval = [];
-
-      const context = {
-        street_id:"",
-        street_wealth:1,
-        encounter_tag:(tag) => false
-      };
-
-      const barks = deckFromJson(loadJsonFile("Barks.jsonc"), context, /* reshuffle */ false);
-      barks.reshuffleAsync(()=>console.debug("Async reshuffle complete."),null,dump_eval);
-
-      while (barks.asyncReshuffleInProgress()) {
-        barks.update();
-      }
-
-      console.log(barks.dumpDrawPile());
-
-      let card = barks.draw();
-      assert.equal(card.id, "welcome");
-
-      card = barks.draw();
-      assert.notEqual(null, card);
-
-      //console.log(dump_eval.join('\n'));
-
-    });
-  });
-
-  describe('ShuffleTest', () => {
-    it('', () => {
-
-      let dump_eval = [];
-
-      const context = {
-        street_id:"",
-        street_wealth:1,
-        encounter_tag:(tag) => true
-      };
-
-      const json = loadJsonFile("Barks.jsonc");
-      const deck = deckFromJson(json, context, true, dump_eval);
-
-      let drawn = deck.drawHand(10);
-      assert.notEqual(drawn.length, 10);
-
-      /*for (let i=0;i<drawn.length;i++) {
-        console.log(`Card ${i}: ${drawn[i].id}`);
-      }*/
-
-      deck.reset();
-      drawn = deck.drawHand(10, true);
-      assert.equal(drawn.length, 10);
-      assert.equal(drawn[0].id, "welcome");
-      /*for (let i=0;i<drawn.length;i++) {
-        console.log(`Card ${i}: ${drawn[i].id}`);
-      }*/
-
-
-      //console.log(dump_eval.join('\n'));
-
-    });
-  });
 });

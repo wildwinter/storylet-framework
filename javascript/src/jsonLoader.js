@@ -30,8 +30,8 @@ export function storyletFromJson(json, defaults) {
     if ("priority" in config) {
       storylet.priority = config.priority;
     }
-    if ("updateOnDrawn" in config) {
-      storylet.updateOnDrawn = config.updateOnDrawn;
+    if ("updateOnPlayed" in config) {
+      storylet.updateOnPlayed = config.updateOnPlayed;
     }
     if ("content" in config) {
       storylet.content = config.content;
@@ -41,13 +41,10 @@ export function storyletFromJson(json, defaults) {
 
 
 // Parse from json
-// reshuffle automatically reshuffles before returning.
 // dump_eval will fill an array with evaluation debug steps
-export function deckFromJson(json, context = {}, reshuffle = true, dump_eval = null) {
+export function deckFromJson(json, context = {}, dump_eval = null) {
     const deck = new Deck(context);
     _readPacketFromJson(deck, json, {}, dump_eval);
-    if (reshuffle)
-        deck.reshuffle(null, dump_eval);
     return deck
 }
 

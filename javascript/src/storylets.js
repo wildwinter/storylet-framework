@@ -31,19 +31,22 @@ export class Storylet {
     // Only for lightweight behaviours and won't work well for
     // conditionals, might be best to implement
     // something app-specific.
-    this.updateOnDrawn = null;
+    this.updateOnPlayed = null;
 
     // Precompiled
     this._condition = null;
     // Might be absolute value, might be an expression
     this._priority = 0;
     // The next draw this should be available.
-    this._nextDraw = 0;
+    this._nextPlay = 0;
+
+    // Attached to a deck.
+    this.deck = null;
   }
 
   // Reset the redraw counter
   reset() {
-    this._nextDraw = 0;
+    this._nextPlay = 0;
   }
 
   // Set text of expression. It'll be precompiled.
@@ -99,21 +102,32 @@ export class Storylet {
   }
 
   // True if the card is available to draw according to its redraw rules.
-  canDraw(currentDraw) {
-    if (this.redraw == REDRAW_NEVER && this._nextDraw<0)
+  canDraw(currentPlay) {
+    if (this.redraw == REDRAW_NEVER && this._nextPlay<0)
       return false;
     if (this.redraw == REDRAW_ALWAYS)
       return true;
-    return currentDraw>=this._nextDraw;
+    return currentPlay>=this._nextPlay;
   }
 
-  // Call when actually drawn - updates the redraw counter.
-  drawn(currentDraw) {
+  // Call when actually played - updates the play counter.
+  onPlayed(currentPlay, context) {
     if (this.redraw == REDRAW_NEVER) {
-      this._nextDraw = -1;
-      return;
+      this._nextPlay = -1;
+    } else {
+      this._nextPlay = currentPlay + this.redraw;
     }
-    this._nextDraw = currentDraw + this.redraw;
+    if (this.updateOnPlayed)
+      updateContext(context, this.updateOnPlayed);
+
+  }
+
+  // Convenience. Play the storylet. Updates draw counters and applies any updateOnPlayed
+  play() {
+    if (!this.deck) {
+      throw new Error("Storylet not in deck.");
+    }
+    this.deck.play(this);
   }
 
 }
@@ -128,9 +142,6 @@ export class Deck {
     // treated as higher priority
     this.useSpecificity = false;
 
-    // How many storylets to process on each call to update(), if using async reshuffles?
-    this.asyncReshuffleCount = 10;
-    
     // Complete set of storylets
     this._all = new Map();
 
@@ -139,13 +150,10 @@ export class Deck {
 
     // Keeps a count of the number of draws. Used to keep redraw rules correct.
     // Call reset() to start from scratch.
-    this._currentDraw = 0;
+    this._currentPlay = 0;
 
     // Context to be used for all expression evaluations.
     this.context = context;
-
-    // Used to deal with in-progress reshuffles.
-    this._reshuffleState = {callback:null, toProcess:[], filter:null, priorityMap:null, dump_eval:null};
   }
 
   // Reset the whole pack, including all redraw counters.
@@ -158,50 +166,89 @@ export class Deck {
 
   // Reshuffle the deck, filtering out any storylets whose conditions return false, 
   // and anything which fails the optionally supplied filter.
+  // Return "count" storylets, or all of them if count is -1.
   // The draw pile will be sorted by priority (and specificity where relevant)
-  // Might be slow if you have a lot of storylets - consider reshuffleAsync instead.
   // dump_eval will fill an array with evaluation debug steps
-  reshuffle(filter=null, dump_eval = null) {
+  draw(count = -1, filter=null, dump_eval = null) {
 
-    if (this.asyncReshuffleInProgress()) {
-      throw new Error("Async reshuffle in progress, can't call reshuffle()");
+    // Temp map to hold lists by priority
+    const priorityMap = new Map();
+
+    // All the cards to walk
+    const toProcess = [...this._all.values()];
+
+    while (toProcess.length>0) {
+
+      const storylet = toProcess.shift();
+
+      if (!storylet.canDraw(this._currentPlay)) {
+        // Storylet fails the draw rules - skip
+        continue;
+      }
+      
+      // Apply filter, if available
+      if (filter!=null) {
+        if (!filter(storylet)) {
+          // Storylet fails the filter - skip
+          continue;
+        }
+      }
+
+      if (!storylet.checkCondition(this.context, dump_eval)) {
+        // Storylet fails the condition - skip
+        continue;
+      }
+
+      // Get the current priority for the storylet
+      let priority = storylet.calcCurrentPriority(this.context, this.useSpecificity, dump_eval);
+      
+      if (!priorityMap.has(priority)) {
+        // Does a priority list for this priority value exist in the temp map? If not, make it
+        priorityMap.set(priority, []);
+      }
+      // Add our card to this priority list
+      priorityMap.get(priority).push(storylet);
     }
 
-    this._reshufflePrep(filter, dump_eval);
-    // Reshuffle everything at once.
-    this._reshuffleDoChunk(this._reshuffleState.toProcess.length);
-    this._reshuffleFinalise();
-  }
+    const sortedPriorities = [...priorityMap.keys()].sort((a, b) => b - a);
+    const drawPile = [];
 
-  // Use this to kick off an async reshuffle. Now you need to call update() periodically (e.g. every frame)
-  // When the reshuffle is complete, the callback will be called.
-  // dump_eval will fill an array with evaluation debug steps
-  reshuffleAsync(callback, filter=null, dump_eval = null) {
-
-    if (this.asyncReshuffleInProgress()) {
-      throw new Error("Async reshuffle in progress, can't call reshuffleAsync()");
-    }
-
-    this._reshuffleState.callback = callback;
-    this._reshufflePrep(filter, dump_eval);
-
-  }
-
-  asyncReshuffleInProgress() {
-    return this._reshuffleState.callback!=null;
-  }
-
-  // If you are using reshuffleAsync, call this every so often (e.g. every frame) to get the reshuffle to happen.
-  update() {
-
-    // If an async reshuffle is in progress
-    if (this.asyncReshuffleInProgress()) {
-      this._reshuffleDoChunk(this.asyncReshuffleCount);
-      if (this._reshuffleState.toProcess.length==0) {
-        this._reshuffleFinalise();
+    // Shuffle each set of storylets that are the same priority. Then add them all to the master draw pile.
+    // Result will be - higher priorities will be in the pile at the front, and we go down from there.
+    for (const priority of sortedPriorities) {
+      const bucket = priorityMap.get(priority);
+      shuffleArray(bucket);
+      drawPile.push(...bucket);
+      if (count > -1 && drawPile.length > count) {
+        break;
       }
     }
 
+    return count > -1 ? drawPile.slice(0, count) : drawPile;
+  }
+
+  drawAndPlay(count = -1, filter=null, dump_eval = null) {
+    const drawn = this.draw(count, filter, dump_eval);
+    for (let i = 0; i < drawn.length; i++) {
+      drawn[i].play();
+    }
+    return drawn;
+  }
+
+  drawSingle(filter = null, dump_eval = null) {
+    let drawn = this.draw(1, filter, dump_eval);
+    if (drawn.length == 0) {
+      return null;
+    }
+    return drawn[0];
+  }
+
+  drawAndPlaySingle(filter = null, dump_eval = null) {
+    const drawn = this.drawSingle(filter, dump_eval);
+    if (drawn) {
+      drawn.play();
+    }
+    return drawn;
   }
 
   getStorylet(id) {
@@ -213,135 +260,12 @@ export class Deck {
       throw new Error(`Storylet with id ${storylet.id} already exists`);
     }
     this._all.set(storylet.id, storylet);
+    storylet.deck = this;
   }
 
-  _reshufflePrep(filter, dump_eval=null) {
-    // Empty the draw pile
-    this._drawPile = [];
-    this._reshuffleState.dump_eval = dump_eval;
-    this._reshuffleState.filter = filter;
-    // Temp map to hold lists by priority
-    this._reshuffleState.priorityMap = new Map();
-    // All the cards to walk
-    this._reshuffleState.toProcess = [...this._all.values()];
-  }
-
-
-  _reshuffleDoChunk(count) {
-
-    let numberToDo = Math.min(count, this._reshuffleState.toProcess.length);
-
-    while (numberToDo>0) {
-
-      numberToDo--;
-      
-      const storylet = this._reshuffleState.toProcess.shift();
-
-      if (!storylet.canDraw(this._currentDraw)) {
-        // Storylet fails the draw rules - skip
-        continue;
-      }
-      
-      // Apply filter, if available
-      if (this._reshuffleState.filter!=null) {
-        if (!this._reshuffleState.filter(storylet)) {
-          // Storylet fails the filter - skip
-          continue;
-        }
-      }
-
-      if (!storylet.checkCondition(this.context, this._reshuffleState.dump_eval)) {
-        // Storylet fails the condition - skip
-        //console.log(`Storylet '${storylet.id}': condition '${storylet.condition}' didn't pass.`);
-        continue;
-      }
-
-      // Get the current priority for the storylet
-      let priority = storylet.calcCurrentPriority(this.context, this.useSpecificity, this._reshuffleState.dump_eval);
-      
-      if (!this._reshuffleState.priorityMap.has(priority)) {
-        // Does a priority list for this priority value exist in the temp map? If not, make it
-        this._reshuffleState.priorityMap.set(priority, []);
-      }
-      // Add our card to this priority list
-      this._reshuffleState.priorityMap.get(priority).push(storylet);
-    }
-
-  }
-
-  _reshuffleFinalise() {
-    // Now sort all the resultant priorities
-    const sortedPriorities = [...this._reshuffleState.priorityMap.keys()].sort((a, b) => b - a);
-
-    // Shuffle each set of storylets that are the same priority. Then add them all to the master draw pile.
-    // Result will be - higher priorities will be in the pile at the front, and we go down from there.
-    for (const priority of sortedPriorities) {
-      const bucket = this._reshuffleState.priorityMap.get(priority);
-      shuffleArray(bucket);
-      this._drawPile.push(...bucket);
-    }
-
-    this._reshuffleState.priorityMap = null;
-    this._reshuffleState.toProcess = [];
-    this._reshuffleState.filter = null;
-    const callback = this._reshuffleState.callback;
-    this._reshuffleState.callback = null;
-    this._reshuffleState.dump_eval = null;
-    if (callback) {
-      callback();
-    }
-  }
-
-  // For debugging - simply dump the IDs of the current draw pile storylets.
-  dumpDrawPile() {
-    if (this.asyncReshuffleInProgress()) {
-      throw new Error("Async reshuffle in progress, can't call dumpDrawPile()");
-    }
-
-    let ids = [];
-    for (const storylet of this._drawPile) {
-      ids.push(storylet.id);
-    }
-    return ids.join(',');
-  }
-
-  // Draw the next storylet from the draw pile. If it's got an updateOnDrawn, make that happen.
-  draw() {
-    
-    if (this.asyncReshuffleInProgress()) {
-      throw new Error("Async reshuffle in progress, can't call draw()");
-    }
-
-    this._currentDraw++;
-
-    if (this._drawPile.length==0)
-      return null;
-
-    const storylet = this._drawPile.shift();
-    if (storylet.updateOnDrawn)
-      updateContext(this.context, storylet.updateOnDrawn);
-    storylet.drawn(this._currentDraw);
-    return storylet;
-  }
-
-  drawHand(count, reshuffleIfNeeded=false) {
-    const storylets = [];
-    for (let i=0;i<count;i++) {
-
-      if (this._drawPile.length==0) {
-        if (reshuffleIfNeeded) {
-          this.reshuffle();
-        } else {
-          break;
-        }
-      }
-
-      const storylet = this.draw();
-      if (storylet==null)
-        break;
-      
-      storylets.push(storylet);
-    }
-    return storylets;
+  // Mark this storylet as played. If it's got an updateOnPlayed, make that happen.
+  play(storylet) {
+    this._currentPlay++;
+    storylet.onPlayed(this._currentPlay, this.context);
   }
 }

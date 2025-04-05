@@ -43,9 +43,9 @@ namespace StoryletFramework
             storylet->SetPriority(val.get<std::string>());
         }
 
-        if (config.contains("updateOnDrawn"))
+        if (config.contains("updateOnPlayed"))
         {
-            storylet->updateOnDrawn = JsonToKeyedMap(config["updateOnDrawn"]);
+            storylet->updateOnPlayed = JsonToKeyedMap(config["updateOnPlayed"]);
         }
         if (config.contains("content"))
         {
@@ -54,12 +54,10 @@ namespace StoryletFramework
         return storylet;
     }
 
-    std::shared_ptr<Deck> DeckFromJson(const nlohmann::json& json, Context* context, bool reshuffle, DumpEval* dumpEval)
+    std::shared_ptr<Deck> DeckFromJson(const nlohmann::json& json, Context* context, DumpEval* dumpEval)
     {
         std::shared_ptr<Deck> deck = std::make_shared<Deck>(*context);
         _readPacketFromJson(*deck, json, nlohmann::json::object(), dumpEval);
-        if (reshuffle)
-            deck->Reshuffle(nullptr, dumpEval);
         return deck;
     }
 

@@ -19,18 +19,26 @@ namespace StoryletFramework {
     const int REDRAW_ALWAYS = 0;
     const int REDRAW_NEVER = -1;
 
+    class Deck;
+
     class Storylet
     {
+        friend class Deck;
+
     public:
         std::string id; // Unique ID of the storylet
         std::any content; // Application-defined content
         int redraw = REDRAW_ALWAYS; // Redraw setting
-        KeyedMap updateOnDrawn; // Updates to context
+        KeyedMap updateOnPlayed; // Updates to context
 
     private:
         std::shared_ptr<ExpressionParser::ExpressionNode> _condition; // Precompiled condition
         std::any _priority = 0; // Priority (absolute value or expression)
-        int _nextDraw = 0; // The next draw this should be available
+        int _nextPlay = 0; // The next draw this should be available
+        Deck* _deck = nullptr; // Pointer to the deck this storylet belongs to
+
+        // Call when actually drawn - updates the redraw counter
+        void OnPlayed(int currentPlay, Context& context);
 
     public:
         // Constructor
@@ -53,50 +61,33 @@ namespace StoryletFramework {
         int CalcCurrentPriority(const Context& context, bool useSpecificity = true, DumpEval* dumpEval = nullptr) const;
 
         // Check if the storylet is available to draw according to its redraw rules
-        bool CanDraw(int currentDraw) const;
+        bool CanDraw(int currentPlay) const;
 
-        // Call when actually drawn - updates the redraw counter
-        void Drawn(int currentDraw);
+        void Play();
     };
 
     class Deck
     {
     private:
-        std::unordered_map<std::string, std::shared_ptr<Storylet>> _all; // Store shared_ptr to Storylet
-        std::vector<std::shared_ptr<Storylet>> _drawPile; // Store shared_ptr to Storylet
+        std::unordered_map<std::string, std::shared_ptr<Storylet>> _all;
         int _currentDraw = 0;
-    
-        struct ReshuffleState
-        {
-            std::function<void()> callback = nullptr;
-            std::vector<std::shared_ptr<Storylet>> toProcess; // Store shared_ptr to Storylet
-            std::unordered_map<int, std::vector<std::shared_ptr<Storylet>>> priorityMap; // Store shared_ptr to Storylet
-            std::function<bool(const Storylet&)> filter = nullptr;
-            DumpEval* dumpEval = nullptr;
-        } _reshuffleState;
-    
-        void _reshufflePrep(std::function<bool(const Storylet&)> filter, DumpEval* dumpEval = nullptr);
-        void _reshuffleDoChunk(size_t count);
-        void _reshuffleFinalise();
-    
+
     public:
         explicit Deck();
         explicit Deck(Context& context);
         void Reset();
-        void Reshuffle(std::function<bool(const Storylet&)> filter = nullptr, DumpEval* dumpEval = nullptr);
-        void ReshuffleAsync(std::function<void()> callback, std::function<bool(const Storylet&)> filter = nullptr, DumpEval* dumpEval = nullptr);
-        bool AsyncReshuffleInProgress() const;
-        void Update();
+        std::vector<std::shared_ptr<Storylet>> Draw(int count=-1, std::function<bool(const Storylet&)> filter = nullptr, DumpEval* dumpEval = nullptr);
+        std::vector<std::shared_ptr<Storylet>> DrawAndPlay(int count=-1, std::function<bool(const Storylet&)> filter= nullptr, DumpEval* dumpEval = nullptr);
+        std::shared_ptr<Storylet> DrawSingle(std::function<bool(const Storylet&)> filter= nullptr, DumpEval* dumpEval = nullptr);
+        std::shared_ptr<Storylet> DrawAndPlaySingle(std::function<bool(const Storylet&)> filter= nullptr, DumpEval* dumpEval = nullptr);
+ 
+ 
         std::shared_ptr<Storylet> GetStorylet(const std::string& id) const;
         void AddStorylet(std::shared_ptr<Storylet> storylet);
-        std::string DumpDrawPile() const;
-        std::shared_ptr<Storylet> Draw();
-        std::vector<std::shared_ptr<Storylet>> DrawHand(int count, bool reshuffleIfNeeded = false);
+        void Play(Storylet& storylet);
 
         std::shared_ptr<Context> context;
         bool useSpecificity = false;
-        int asyncReshuffleCount = 10;
-
     };
 
 } // namespace StoryletFramework
