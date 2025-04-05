@@ -4,3 +4,4 @@
 export * from "./utils"
 export * from "./context"
 export * from "./storylets"
+export * from "./jsonLoader"

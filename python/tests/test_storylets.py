@@ -8,7 +8,7 @@ from test_utils import load_json_file
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../src")))
 
-from storylet_framework.storylets import Deck
+from storylet_framework.json_loader import deck_from_json
 
 class TestStorylets(unittest.TestCase):
 
@@ -20,7 +20,7 @@ class TestStorylets(unittest.TestCase):
         dump_eval = []
     
         json_data = load_json_file("Streets.jsonc")
-        deck = Deck.from_json(json_data, {}, True, dump_eval)
+        deck = deck_from_json(json_data, {}, True, dump_eval)
     
         card = deck.draw()
         self.assertIsNotNone(card)
@@ -38,7 +38,7 @@ class TestStorylets(unittest.TestCase):
             "encounter_tag": lambda tag: False
         }
     
-        barks = Deck.from_json(load_json_file("Barks.jsonc"), context)
+        barks = deck_from_json(load_json_file("Barks.jsonc"), context)
         #print(barks.dump_draw_pile())
         self.assertIsNotNone(barks.draw())
 
@@ -50,9 +50,9 @@ class TestStorylets(unittest.TestCase):
             "encounter_tag": lambda tag: False
         }
     
-        streets = Deck.from_json(load_json_file("Streets.jsonc"), context)
-        encounters = Deck.from_json(load_json_file("Encounters.jsonc"), context)
-        barks = Deck.from_json(load_json_file("Barks.jsonc"), context)
+        streets = deck_from_json(load_json_file("Streets.jsonc"), context)
+        encounters = deck_from_json(load_json_file("Encounters.jsonc"), context)
+        barks = deck_from_json(load_json_file("Barks.jsonc"), context)
     
         def set_street(street):
             context["street_id"] = street.id
@@ -103,7 +103,7 @@ class TestStorylets(unittest.TestCase):
             "encounter_tag": lambda tag: False
         }
     
-        barks = Deck.from_json(load_json_file("Barks.jsonc"), context, reshuffle=False)
+        barks = deck_from_json(load_json_file("Barks.jsonc"), context, reshuffle=False)
         barks.reshuffle_async(lambda: print("Async reshuffle complete."), None, dump_eval)
     
         while barks.async_reshuffle_in_progress():
@@ -130,7 +130,7 @@ class TestStorylets(unittest.TestCase):
 
         # Load the JSON file and create a Deck
         json_data = load_json_file("Barks.jsonc")
-        deck = Deck.from_json(json_data, context, reshuffle=True, dump_eval=dump_eval)
+        deck = deck_from_json(json_data, context, reshuffle=True, dump_eval=dump_eval)
 
         # Draw a hand of 10 cards and assert the length is not 10
         drawn = deck.draw_hand(10)

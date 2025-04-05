@@ -3,14 +3,12 @@
 
 import sys
 import os
-from typing import Any, Dict, List, Optional
-from .utils import update_object, shuffle_array, copy_object
-from .context import init_context, update_context
+from .utils import shuffle_array
+from .context import update_context
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../lib/expression-parser")))
 
 from expression_parser.parser import Parser
-
 expression_parser = Parser()
 
 REDRAW_ALWAYS = 0
@@ -107,42 +105,10 @@ class Storylet:
             self._next_draw = -1
         else:
             self._next_draw = current_draw + self.redraw
-
-    # Basic parsing
-    @staticmethod
-    def from_json(json, defaults):
-        if "id" not in json:
-            raise ValueError("No 'id' property in the storylet JSON.")
-
-        config = defaults.copy()
-        update_object(config, json)
-
-        storylet = Storylet(config["id"])
-        if "redraw" in config:
-            val = config["redraw"]
-            if val == "always":
-                storylet.redraw = REDRAW_ALWAYS
-            elif val == "never":
-                storylet.redraw = REDRAW_NEVER
-            else:
-                storylet.redraw = int(val)
-
-        if "condition" in config:
-            storylet.condition = config["condition"]
-        if "priority" in config:
-            storylet.priority = config["priority"]
-        if "updateOnDrawn" in config:
-            storylet.update_on_drawn = config["updateOnDrawn"]
-        if "content" in config:
-            storylet.content = config["content"]
-
-        return storylet
     
 
 class Deck:
-    def __init__(self, context=None):
-        if context is None:
-            context = {}
+    def __init__(self, context={}):
 
         # If true, storylet.priority is still used as the base, but
         # within priorities, more complex conditions (thus more specific) are
@@ -163,7 +129,7 @@ class Deck:
         self._current_draw = 0
 
         # Context to be used for all expression evaluations.
-        self._context = context
+        self.context = context
 
         # Used to deal with in-progress reshuffles.
         self._reshuffle_state = {
@@ -173,50 +139,6 @@ class Deck:
             "priority_map": {},
             "dump_eval": None,
         }
-
-    @staticmethod
-    def from_json(json, context=None, reshuffle=True, dump_eval=None):
-        if context is None:
-            context = {}
-
-        deck = Deck(context)
-        deck.load_json(json, dump_eval)
-        if reshuffle:
-            deck.reshuffle(None, dump_eval)
-        return deck
-
-    def load_json(self, json, dump_eval=None):
-        self._read_packet_from_json(json, {}, dump_eval)
-
-    def _read_packet_from_json(self, json, defaults, dump_eval=None):
-        if "context" in json:
-            init_context(self._context, json["context"], dump_eval)
-
-        if "defaults" in json:
-            for var_name, value in json["defaults"].items():
-                defaults[var_name] = value
-
-        if "storylets" in json:
-            self._read_storylets_from_json(json["storylets"], copy_object(defaults), dump_eval)
-
-    def _read_storylets_from_json(self, json, defaults, dump_eval=None):
-        for item in json:
-            # Is this a storylet? Or is it a packet?
-            if "storylets" in item or "defaults" in item or "context" in item:
-                self._read_packet_from_json(item, defaults, dump_eval)
-                continue
-
-            # Read as storylet
-            if "id" not in item:
-                raise ValueError("Json item is not a storylet or packet")
-
-            storylet = Storylet.from_json(item, defaults)
-            if storylet.id in self._all:
-                raise ValueError(f"Duplicate storylet id: '{storylet.id}'")
-
-            self._all[storylet.id] = storylet
-            if dump_eval is not None:
-                dump_eval.append(f"Added storylet '{storylet.id}'")
 
     def reset(self):
         self._current_draw = 0
@@ -249,6 +171,46 @@ class Deck:
             if not self._reshuffle_state["to_process"]:
                 self._reshuffle_finalize()
 
+    def get_storylet(self, id):
+        return self._all.get(id)
+    
+    def add_storylet(self, storylet):
+        if storylet.id in self._all:
+            raise ValueError(f"Storylet with id '{storylet.id}' already exists in the deck.")
+        self._all[storylet.id] = storylet
+    
+    def draw(self):
+        if self.async_reshuffle_in_progress():
+            raise RuntimeError("Async reshuffle in progress, can't call draw()")
+
+        self._current_draw += 1
+
+        if not self._draw_pile:
+            return None
+
+        storylet = self._draw_pile.pop(0)
+        if storylet.update_on_drawn:
+            update_context(self.context, storylet.update_on_drawn)
+        storylet.drawn(self._current_draw)
+        return storylet
+
+    def draw_hand(self, count, reshuffle_if_needed=False):
+        storylets = []
+        for _ in range(count):
+            if len(self._draw_pile) == 0:
+                if reshuffle_if_needed:
+                    self.reshuffle()
+                else:
+                    break
+
+            storylet = self.draw()
+            if storylet is None:
+                break
+
+            storylets.append(storylet)
+
+        return storylets
+    
     def _reshuffle_prep(self, filter, dump_eval=None):
         # Empty the draw pile
         self._draw_pile = []
@@ -277,13 +239,13 @@ class Deck:
                     # Storylet fails the filter - skip
                     continue
 
-            if not storylet.check_condition(self._context, self._reshuffle_state["dump_eval"]):
+            if not storylet.check_condition(self.context, self._reshuffle_state["dump_eval"]):
                 # Storylet fails the condition - skip
                 continue
 
             # Get the current priority for the storylet
             priority = storylet.calc_current_priority(
-                self._context, self.use_specificity, self._reshuffle_state["dump_eval"]
+                self.context, self.use_specificity, self._reshuffle_state["dump_eval"]
             )
 
             if priority not in self._reshuffle_state["priority_map"]:
@@ -318,35 +280,3 @@ class Deck:
             raise RuntimeError("Async reshuffle in progress, can't call dump_draw_pile()")
 
         return ",".join(storylet.id for storylet in self._draw_pile)
-
-    def draw(self):
-        if self.async_reshuffle_in_progress():
-            raise RuntimeError("Async reshuffle in progress, can't call draw()")
-
-        self._current_draw += 1
-
-        if not self._draw_pile:
-            return None
-
-        storylet = self._draw_pile.pop(0)
-        if storylet.update_on_drawn:
-            update_context(self._context, storylet.update_on_drawn)
-        storylet.drawn(self._current_draw)
-        return storylet
-
-    def draw_hand(self, count, reshuffle_if_needed=False):
-        storylets = []
-        for _ in range(count):
-            if len(self._draw_pile) == 0:
-                if reshuffle_if_needed:
-                    self.reshuffle()
-                else:
-                    break
-
-            storylet = self.draw()
-            if storylet is None:
-                break
-
-            storylets.append(storylet)
-
-        return storylets

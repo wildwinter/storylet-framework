@@ -3,7 +3,7 @@
 
 import {loadJsonFile} from '../test/testUtils.js';
 import {strict as assert} from 'assert';
-import {Deck} from "../src/storylets.js";
+import {deckFromJson} from "../src/jsonLoader.js";
 
 describe('Storylets', () => {
 
@@ -13,7 +13,7 @@ describe('Storylets', () => {
       let dump_eval = [];
 
       const json = loadJsonFile("Streets.jsonc");
-      const deck = Deck.fromJson(json, {}, true, dump_eval);
+      const deck = deckFromJson(json, {}, true, dump_eval);
 
       let card = deck.draw();
       assert.notEqual(null, card);
@@ -33,7 +33,7 @@ describe('Storylets', () => {
         encounter_tag:(tag) => false
       };
 
-      const barks = Deck.fromJson(loadJsonFile("Barks.jsonc"), context);
+      const barks = deckFromJson(loadJsonFile("Barks.jsonc"), context);
       //console.log(barks.dumpDrawPile());
       assert.notEqual(null, barks.draw());
     });
@@ -47,9 +47,9 @@ describe('Storylets', () => {
         encounter_tag:(tag) => false
       };
 
-      const streets = Deck.fromJson(loadJsonFile("Streets.jsonc"), context);
-      const encounters = Deck.fromJson(loadJsonFile("Encounters.jsonc"), context);
-      const barks = Deck.fromJson(loadJsonFile("Barks.jsonc"), context);
+      const streets = deckFromJson(loadJsonFile("Streets.jsonc"), context);
+      const encounters = deckFromJson(loadJsonFile("Encounters.jsonc"), context);
+      const barks = deckFromJson(loadJsonFile("Barks.jsonc"), context);
 
       let setStreet = (street) => {
         context.street_id = street.id;
@@ -113,7 +113,7 @@ describe('Storylets', () => {
         encounter_tag:(tag) => false
       };
 
-      const barks = Deck.fromJson(loadJsonFile("Barks.jsonc"), context, /* reshuffle */ false);
+      const barks = deckFromJson(loadJsonFile("Barks.jsonc"), context, /* reshuffle */ false);
       barks.reshuffleAsync(()=>console.debug("Async reshuffle complete."),null,dump_eval);
 
       while (barks.asyncReshuffleInProgress()) {
@@ -145,7 +145,7 @@ describe('Storylets', () => {
       };
 
       const json = loadJsonFile("Barks.jsonc");
-      const deck = Deck.fromJson(json, context, true, dump_eval);
+      const deck = deckFromJson(json, context, true, dump_eval);
 
       let drawn = deck.drawHand(10);
       assert.notEqual(drawn.length, 10);

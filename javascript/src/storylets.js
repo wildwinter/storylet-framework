@@ -2,14 +2,14 @@
 // Copyright (c) 2025 Ian Thomas
 
 import { ExpressionParser } from '../lib/expression-parser/expressionParser.js';
-import { shuffleArray, copyObject, updateObject } from "./utils.js";
-import { initContext, updateContext } from "./context.js";
+import { shuffleArray } from "./utils.js";
+import { updateContext } from "./context.js";
 
 const expressionParser = new ExpressionParser();
 
 // Meta-values in Redraw.
-const REDRAW_ALWAYS = 0;
-const REDRAW_NEVER = -1;
+export const REDRAW_ALWAYS = 0;
+export const REDRAW_NEVER = -1;
 
 export class Storylet {
 
@@ -116,45 +116,6 @@ export class Storylet {
     this._nextDraw = currentDraw + this.redraw;
   }
 
-  // Basic parsing
-  static fromJson(json, defaults) {
-
-    if (!("id" in json))
-      throw new Error("No 'id' property in the storylet JSON.", json);
-
-    let config = defaults;
-    // Make config into the "import this" version of the storylet - a combination of the current packet defaults
-    // and the new material found in the storylet itself.
-    updateObject(config, json);
-    //console.log("Parsing:", json.id, config);
-
-
-    const storylet = new Storylet(config.id);
-    if ("redraw" in config) {
-      let val = config.redraw;
-      if (val=="always")
-        storylet.redraw = REDRAW_ALWAYS;
-      else if (val=="never")
-        storylet.redraw = REDRAW_NEVER;
-      else
-        storylet.redraw = parseInt(val);
-    }
-
-    if ("condition" in config) {
-      storylet.condition = config.condition;
-    }
-    if ("priority" in config) {
-      storylet.priority = config.priority;
-    }
-    if ("updateOnDrawn" in config) {
-      storylet.updateOnDrawn = config.updateOnDrawn;
-    }
-    if ("content" in config) {
-      storylet.content = config.content;
-    }
-    return storylet;
-  }
-
 }
 
 // Deck of storylets.
@@ -181,75 +142,10 @@ export class Deck {
     this._currentDraw = 0;
 
     // Context to be used for all expression evaluations.
-    this._context = context;
+    this.context = context;
 
     // Used to deal with in-progress reshuffles.
     this._reshuffleState = {callback:null, toProcess:[], filter:null, priorityMap:null, dump_eval:null};
-  }
-
-  // Parse from json
-  // reshuffle automatically reshuffles before returning.
-  // dump_eval will fill an array with evaluation debug steps
-  static fromJson(json, context = {}, reshuffle = true, dump_eval = null) {
-    const deck = new Deck(context);
-    deck.loadJson(json, dump_eval);
-    if (reshuffle)
-      deck.reshuffle(null, dump_eval);
-    return deck
-  }
-
-  // dump_eval will fill an array with evaluation debug steps
-  loadJson(json, dump_eval = null) {
-    this._readPacketFromJson(json, {}, dump_eval);
-  }
-
-  // Read a packet of storylets, inheriting the given defaults
-  _readPacketFromJson(json, defaults, dump_eval = null) {
-
-    if ("context" in json) {
-      initContext(this._context, json.context, dump_eval);
-    }
-
-    if ("defaults" in json) {
-      for (const [varName, value] of Object.entries(json.defaults)) {
-        defaults[varName] = value;
-      }
-    }
-
-    if ("storylets" in json) {
-      this._readStoryletsFromJson(json.storylets, copyObject(defaults), dump_eval);
-    }
-  }
-
-  // Read an array of storylets, inheriting the given defaults. If any storylets is actually a packet,
-  //   read that packet.
-  // dump_eval will fill an array with evaluation debug steps
-  _readStoryletsFromJson(json, defaults, dump_eval=null) {
-
-    for (const item of json) {
-    
-      // Is this a storylet? Or is it a packet?
-      if ("storylets" in item||"defaults" in item||"context" in item) {
-        this._readPacketFromJson(item, defaults, dump_eval);
-        continue;
-      }
-
-      // Read as storylet.
-      if (!("id" in item)) {
-        throw new Error(`Json item is not storylet or packet`, item);
-      }
-
-      const storylet = Storylet.fromJson(item, defaults);
-      if (this._all.has(storylet.id)) {
-        throw new Error(`Duplicate storylet id: '${storylet.id}'.`, item);
-      }
-
-      this._all.set(storylet.id, storylet);
-      if (dump_eval) {
-        dump_eval.push(`Added storylet '${storylet.id}'`);
-      }
-    }
-
   }
 
   // Reset the whole pack, including all redraw counters.
@@ -308,6 +204,17 @@ export class Deck {
 
   }
 
+  getStorylet(id) {
+    return this._all.get(id);
+  } 
+
+  addStorylet(storylet) {
+    if (this._all.has(storylet.id)) {
+      throw new Error(`Storylet with id ${storylet.id} already exists`);
+    }
+    this._all.set(storylet.id, storylet);
+  }
+
   _reshufflePrep(filter, dump_eval=null) {
     // Empty the draw pile
     this._drawPile = [];
@@ -343,14 +250,14 @@ export class Deck {
         }
       }
 
-      if (!storylet.checkCondition(this._context, this._reshuffleState.dump_eval)) {
+      if (!storylet.checkCondition(this.context, this._reshuffleState.dump_eval)) {
         // Storylet fails the condition - skip
         //console.log(`Storylet '${storylet.id}': condition '${storylet.condition}' didn't pass.`);
         continue;
       }
 
       // Get the current priority for the storylet
-      let priority = storylet.calcCurrentPriority(this._context, this.useSpecificity, this._reshuffleState.dump_eval);
+      let priority = storylet.calcCurrentPriority(this.context, this.useSpecificity, this._reshuffleState.dump_eval);
       
       if (!this._reshuffleState.priorityMap.has(priority)) {
         // Does a priority list for this priority value exist in the temp map? If not, make it
@@ -412,7 +319,7 @@ export class Deck {
 
     const storylet = this._drawPile.shift();
     if (storylet.updateOnDrawn)
-      updateContext(this._context, storylet.updateOnDrawn);
+      updateContext(this.context, storylet.updateOnDrawn);
     storylet.drawn(this._currentDraw);
     return storylet;
   }
