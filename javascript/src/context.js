@@ -36,7 +36,8 @@ export function updateContext(context, updates, dump_eval = null) {
     if (dump_eval)
       dump_eval.push(`UpdateContext: Evaluating ${propName} = ${expression}`);
     const result = evalExpression(expression, context, dump_eval);
-    //console.log(`Setting ${varName} to ${result}`);
+    if (dump_eval)
+      dump_eval.push(`Setting ${propName} to ${result}`);
     if (!(propName in context)) {
       throw new Error(`Context var: '${propName}' undefined.`);
     }

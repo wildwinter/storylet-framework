@@ -51,6 +51,8 @@ class TestStorylets(unittest.TestCase):
         encounters = deck_from_json(load_json_file("Encounters.jsonc"), context)
         barks = deck_from_json(load_json_file("Barks.jsonc"), context)
     
+        dump_eval = []
+        
         def set_street(street):
             context["street_id"] = street.id
             context["street_wealth"] = street.content["wealth"]
@@ -59,15 +61,15 @@ class TestStorylets(unittest.TestCase):
     
         def do_encounter(street):
             set_street(street)
-            encounter = encounters.draw_and_play_single()
+            encounter = encounters.draw_and_play_single(dump_eval=dump_eval)
             context["encounter_tag"] = lambda tag: tag in encounter.content.get("tags", [])
             print(f'  Encounter: "{encounter.content["title"]}"')
-            bark = barks.draw_and_play_single()
+            bark = barks.draw_and_play_single(dump_eval=dump_eval)
             if bark:
                 print(f'  Comment: "{bark.content["comment"]}"')
     
         # First encounter - this should pull out a "start" location.
-        street = streets.draw_and_play_single(lambda street: "start" in street.content["tags"])
+        street = streets.draw_and_play_single(lambda street: "start" in street.content["tags"], dump_eval=dump_eval)
         do_encounter(street)
     
         self.assertIn(street.id, ["docks", "market", "bridge"])
@@ -84,3 +86,5 @@ class TestStorylets(unittest.TestCase):
             do_encounter(street)
     
         self.assertTrue(any(street_id in ["market", "slums", "bridge"] for street_id in path))
+        self.assertTrue(context["noble_storyline"]>0)
+        #print("\n".join(dump_eval))

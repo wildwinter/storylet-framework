@@ -22,8 +22,8 @@ public class Storylet
     public const int REDRAW_NEVER = -1;
     public int Redraw { get; set; } = REDRAW_ALWAYS;
 
-    // Updates to context when drawn
-    public KeyMap? UpdateOnPlayed { get; set; }
+    // Updates to context when played
+    public KeyMap? Outcomes { get; set; }
 
     // Precompiled condition and priority
     private ExpressionNode? _condition;
@@ -120,8 +120,13 @@ public class Storylet
     }
 
     // Update the redraw counter when the storylet is drawn
-    internal void OnPlayed(int currentDraw, Context context)
+    internal void OnPlayed(int currentDraw, Context context, string outcome="default", List<string>? dumpEval = null)
     {
+        if (dumpEval != null)
+        {
+            dumpEval.Add($"Storylet {Id} played with outcome '{outcome}' at draw {currentDraw}.");
+        }
+
         if (Redraw == REDRAW_NEVER)
         {
             _nextPlay = -1;
@@ -130,17 +135,23 @@ public class Storylet
         {
             _nextPlay = currentDraw + Redraw;
         }
-        if (UpdateOnPlayed != null) {
-            ContextUtils.UpdateContext(context, UpdateOnPlayed);
+
+        if (Outcomes != null && Outcomes.ContainsKey(outcome))
+        {
+            var updates = Outcomes[outcome];
+            if (dumpEval != null) {
+                dumpEval.Add($"Updating context for {Id} with outcome '${outcome}");
+            }
+            ContextUtils.UpdateContext(context, (KeyMap)updates, dumpEval);
         }
     }
 
       // Convenience. Play the storylet. Updates draw counters and applies any updateOnPlayed
-    public void Play() {
+    public void Play(string outcome = "default", List<string>? dumpEval = null) {
         if (deck == null) {
             throw new Exception("Storylet not in deck.");
         }
-        deck.Play(this);
+        deck.Play(this, outcome, dumpEval);
     }
 
 }
@@ -212,12 +223,12 @@ public class Deck
         return count > -1 ? [.. drawPile.Take(count)] : drawPile;
     }
 
-    public List<Storylet> DrawAndPlay(int count = -1, Func<Storylet, bool>? filter = null, List<string>? dumpEval = null)
+    public List<Storylet> DrawAndPlay(int count = -1, Func<Storylet, bool>? filter = null, string outcome="default", List<string>? dumpEval = null)
     {
         var drawPile = Draw(count, filter, dumpEval);
         foreach (var storylet in drawPile)
         {
-            Play(storylet);
+            Play(storylet, outcome, dumpEval);
         }
         return drawPile;
     }
@@ -232,12 +243,12 @@ public class Deck
         return null;
     }
 
-    public Storylet? DrawAndPlaySingle(Func<Storylet, bool>? filter = null, List<string>? dumpEval = null)
+    public Storylet? DrawAndPlaySingle(Func<Storylet, bool>? filter = null, string outcome="default", List<string>? dumpEval = null)
     {
         var storylet = DrawSingle(filter, dumpEval);
         if (storylet != null)
         {
-            Play(storylet);
+            Play(storylet, outcome, dumpEval);
         }
         return storylet;
     }
@@ -260,8 +271,8 @@ public class Deck
         storylet.deck = this;
     }
 
-    public void Play(Storylet storylet) {
+    public void Play(Storylet storylet, string outcome = "default", List<string>? dumpEval = null) {
         _currentPlay++;
-        storylet.OnPlayed(_currentPlay, Context);
+        storylet.OnPlayed(_currentPlay, Context, outcome, dumpEval);
     }
 }

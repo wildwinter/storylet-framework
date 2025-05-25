@@ -29,7 +29,7 @@ class Storylet:
         self.redraw = REDRAW_ALWAYS
 
         # Updates to context, processed when this storylet is drawn
-        self.update_on_played = None
+        self.outcomes = None
 
         # Precompiled
         self._condition = None
@@ -102,18 +102,25 @@ class Storylet:
         return current_draw >= self._next_play
 
     # Call when actually drawn - updates the redraw counter
-    def on_played(self, current_play):
+    def on_played(self, current_play, outcome="default", dump_eval=None):
+        if self.deck is None:
+            raise RuntimeError("Storylet not in deck.")
         if self.redraw == REDRAW_NEVER:
             self._next_play = -1
         else:
             self._next_play = current_play + self.redraw
-        if self.update_on_played:
-            update_context(self.deck.context, self.update_on_played)
     
-    def play(self):
+        if self.outcomes is not None:
+            if outcome not in self.outcomes:
+                raise ValueError(f"Outcome '{outcome}' not defined in storylet '{self.id}'.")
+            if dump_eval is not None:
+                dump_eval.append(f"Updating context for {self.id} with outcome '{outcome}'")
+            update_context(self.deck.context, self.outcomes[outcome], dump_eval=dump_eval)
+    
+    def play(self, outcome="default", dump_eval=None):
         if self.deck is None:
             raise RuntimeError("Storylet not in deck.")
-        self.deck.play(self)
+        self.deck.play(self, outcome, dump_eval)
 
 
 class Deck:
@@ -187,10 +194,10 @@ class Deck:
 
         return draw_pile[:count] if count > -1 else draw_pile
 
-    def draw_and_play(self, count=-1, filter=None, dump_eval=None):
+    def draw_and_play(self, count=-1, filter=None, outcome="default", dump_eval=None):
         drawn = self.draw(count, filter, dump_eval)
         for i in range(len(drawn)):
-            drawn[i].play()
+            drawn[i].play(outcome, dump_eval)
         return drawn
     
     def draw_single(self, filter=None, dump_eval=None):
@@ -199,11 +206,11 @@ class Deck:
             return None
         return drawn[0]
     
-    def draw_and_play_single(self, filter=None, dump_eval=None):
+    def draw_and_play_single(self, filter=None, outcome="default", dump_eval=None):
         drawn = self.draw_single(filter, dump_eval)
         if drawn is None:
             return None
-        drawn.play()
+        drawn.play(outcome, dump_eval)
         return drawn
 
     def get_storylet(self, id):
@@ -215,7 +222,7 @@ class Deck:
         self._all[storylet.id] = storylet
         storylet.deck = self
 
-  # Mark this storylet as played. If it's got an updateOnPlayed, make that happen.
-    def play(self, storylet):
+  # Mark this storylet as played.
+    def play(self, storylet, outcome="default", dump_eval=None):
         self._current_play += 1
-        storylet.on_played(self._current_play)
+        storylet.on_played(self._current_play, outcome, dump_eval)

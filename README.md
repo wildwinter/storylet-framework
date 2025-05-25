@@ -36,7 +36,7 @@ console.log(rooms.drawAndPlaySingle().content.title); // "The Upstairs Lounge"
 
 ```
 
-```json
+```jsonc
 {
   "storylets":
   [
@@ -102,6 +102,8 @@ console.log(barks.drawAndPlaySingle().content.text); // "Monsters, sir! Thousand
 ## The Basics
 A **storylet** is a little chunk of experience. A scene, or a line, or a random encounter - whatever you want it to be. The important thing is that it has a *condition* on the front which gets tested to figure out if that chunk of experience is available right now.
 
+See my article [over here](https://wildwinter.medium.com/storylets-explained-ff5a24842bd9) for more info.
+
 The best metaphor I've heard for these are a set of *cards* in a *deck*. Think of the boardgames you know where you draw a card for the next room, or the next counter, or the item that you've picked up.
 
 This framework lets you define the conditions for a storylet, and when you ask to *draw* storylets from a deck, it is reshuffled into a draw pile of *what is a valid card right now* before your cards are issued.
@@ -135,7 +137,7 @@ Releases are available in the releases area in [Github](https://github.com/wildw
 
 #### Basic Storylet
 The basic storylet format is this:
-```json
+```jsonc
 {
     // Mandatory - textual ID of your choice, unique within your deck
     "id": "xxx", 
@@ -148,12 +150,16 @@ The basic storylet format is this:
     "redraw": 4,
     // Optional - your app-specific content, whatever that might be.
     "content": {/*something*/},
-    // Optional - updates the context with the values or expressions supplied when the storylet is played.
-    // Makes it easy to set basic flags and so on.
-    "updateOnPlayed": {
-        "someVal":15,
-        "someFlag":true,
-        "someIncrementalProp":"someIncrementalProp+1"
+    // Optional - gives you possible outcomes/side-effects for when the story is played.
+    // Each outcome consists of a set of changes to the context values.
+    // If there is an outcome called 'default' it will be triggered automatically when
+    // play() happens. Call play("otherOutcome") to make something else happen.
+    "outcomes:"{
+        "default": {
+            "someVal":15,
+            "someFlag":true,
+            "someIncrementalProp":"someIncrementalProp+1"
+        }
     }
 
 }
@@ -168,7 +174,7 @@ But that isn't much use to anyone. Your `content` is probably most important.
 
 #### Packets
 The default JSON file is arranged into a **Packet**, which is shaped like this:
-```json
+```jsonc
 {
     "storylets":
     [
@@ -179,7 +185,7 @@ The default JSON file is arranged into a **Packet**, which is shaped like this:
 }
 ```
 A packet can also contain a `context` section, which is declaring initial variable values for new properties to add to your context (otherwise if you refer to those variables in tests the system will throw an error). You only need to do this for variables which aren't already in your context. For example:
-```json
+```jsonc
 {
     "context": {
         "played_funky_storylet":false // Declare this var so expressions can use it legitimately later
@@ -188,7 +194,7 @@ A packet can also contain a `context` section, which is declaring initial variab
     [
         {"id":"myStory1", 
             "content":{"title":"Storylet 1"}, 
-            "updateOnPlayed":{"played_funky_storylet":true}  // Set this var when this storylet is played
+            "outcomes":{"default":{"played_funky_storylet":true}}  // Set this var when this storylet is played
         },
         {"id":"myStory2", 
             "condition":"!played_funky_storylet", // Only make this storylet available when funky storylet hasn't played!
@@ -204,7 +210,7 @@ A packet can also contain a `context` section, which is declaring initial variab
 (The above assumes that the context you supplied when creating the deck in code was something like `{playerType:"orc"}`).
 
 A packet can also contain a `defaults` section, which means that is gives default values for all of the storylets in the packet. For example:
-```json
+```jsonc
 {
     "context": {
         "played_funky_storylet":false // Declare this var so expressions can use it legitimately later
@@ -217,7 +223,7 @@ A packet can also contain a `defaults` section, which means that is gives defaul
         {"id":"myStory1", 
             /* "redraw": "never" is automatically applied now. */
             "content":{"title":"Storylet 1"}, 
-            "updateOnPlayed":{"played_funky_storylet":true}  // Set this var when this storylet is played
+            "outcomes":{"default":{"played_funky_storylet":true}}  // Set this var when this storylet is played
         },
         {"id":"myStory2", 
             /* "redraw": "never" is automatically applied now. */
@@ -235,7 +241,7 @@ A packet can also contain a `defaults` section, which means that is gives defaul
 #### Packets All The Way Down 
 
 At any point, instead of specifying a storylet, you can specify a packet of storylets. In the end it still means that individual storylets get added to the deck - this is just a simple way of applying the same defaults to a whole collection of storylets. So this is valid:
-```json
+```jsonc
 {
     "storylets":
     [
@@ -268,12 +274,14 @@ Expressions used in conditions or priorities or `updateOnPlayed` are implemented
 
 This lets you have simple expressions and also get values from your `context` or call functions from your `context`. 
 Common operators such as `+, -, /, *, and, or, !, not, ==, !=, >=`, brackets and so on all work as expected.
-```
+```jsonc
 "condition":"color=='red'"
 "condition":"playerRace('orc') and (on_fire or water_level>=5)"
 
-"updateOnPlayed":{
-    "someCounter":"someCounter+1"
+"outcomes":{
+    "default": {
+        "someCounter":"someCounter+1"
+    }
 }
 ```
 
@@ -283,7 +291,7 @@ There are some situations (for example, bark implementations) where it's quite u
 You can turn this on for the deck using `useSpecificity=true`. Priorities still take precedence, but within each priority storylets are sorted by specificity.
 
 So in this:
-```json
+```jsonc
 [
 {"id":"fireComment", 
     "condition":"on_fire", "content":{"comment":"There's a fire!"}}
@@ -298,6 +306,34 @@ So in this:
 
 ### Filtering
 `draw()` lets you pass a `filter` function which can be used to check each storylet (and its contexts). If the filter function returns false, that storylet will be ignored.
+
+### Outcomes
+You can specify a set of **outcomes** which are the side effects that should happen when the storylet is played.
+
+Each outcome consists of a set of *changes to the context* that you can make, i.e. updates to the world state.
+
+If you specify an outcome called "default" then the contents of that will happen, by default.
+
+However, your storylet might have player choices. Kill troll, or not kill the troll. In which case, when you call `play()`, you pass an outcome e.g. `play("killTroll")` and the resulting updates to the storylet are made.
+
+```jsonc
+    {"id":"trollEncounter", 
+        "content":{"title":"Storylet 1"}, 
+        "outcomes":{
+            "killTroll:{
+                "troll_dead":true, 
+                "reputation":"reputation+1", 
+                "war_started":true
+            },
+            "saveTroll:"{
+                "hero_to_trolls":true,
+                "reputation":"reputation-1", 
+            }
+        }
+    }
+```
+
+**Motivation:** Explicit world state changes like this make it much easier to figure out which storylets affect the world state, and everything becomes easier to debug and to write tooling for! Think of it as similar to pre/postconditions.
 
 ### Debugging
 There are some hopefully helpful features for debugging. 

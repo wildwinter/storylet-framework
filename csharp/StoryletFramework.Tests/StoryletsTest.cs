@@ -64,15 +64,18 @@ public class StoryletsTest
         {
             context["street_id"] = street.Id;
             context["street_wealth"] = street.Content?["wealth"] ?? 0;
-            context["street_tag"] = new Func<string, bool>(tag => {
-                if (street.Content?.ContainsKey("tags")) {
-                var tags = street.Content?["tags"];
-                    if (tags is List<string>) {
+            context["street_tag"] = new Func<string, bool>(tag =>
+            {
+                if (street.Content?.ContainsKey("tags"))
+                {
+                    var tags = street.Content?["tags"];
+                    if (tags is List<string>)
+                    {
                         return ((List<string>)tags).Contains(tag);
                     }
                 }
                 return false;
-                });
+            });
             Console.WriteLine($"Location: \"{street.Content?["title"]}\"");
         }
 
@@ -85,7 +88,7 @@ public class StoryletsTest
             var encounter = encounters.DrawAndPlaySingle();
             context["encounter_tag"] = new Func<string, bool>(tag =>
             {
-                if ( encounter==null || !encounter.Content?.ContainsKey("tags"))
+                if (encounter == null || !encounter.Content?.ContainsKey("tags"))
                     return false;
                 return encounter?.Content?["tags"] is List<string> tags && tags.Contains(tag);
             });
@@ -100,10 +103,13 @@ public class StoryletsTest
         }
 
         // First encounter - this should pull out a "start" location
-        var street = streets.DrawAndPlaySingle(street => { 
-            if (street.Content?.ContainsKey("tags")) {
+        var street = streets.DrawAndPlaySingle(street =>
+        {
+            if (street.Content?.ContainsKey("tags"))
+            {
                 var tags = street.Content?["tags"];
-                if (tags is List<string>) {
+                if (tags is List<string>)
+                {
                     return ((List<string>)tags).Contains("start");
                 }
             }
@@ -120,7 +126,7 @@ public class StoryletsTest
         var path = new List<string>();
 
         // Walk through the street deck and pull an encounter for each location
-        for (int i=0;i<streetsDrawn.Count;i++)
+        for (int i = 0; i < streetsDrawn.Count; i++)
         {
             street = streetsDrawn[i];
             street.Play();
@@ -130,5 +136,6 @@ public class StoryletsTest
         }
 
         Assert.True(path.Contains("market") || path.Contains("slums") || path.Contains("bridge"));
+        Assert.True(Convert.ToInt32(context["noble_storyline"]) > 0);
     }
 }

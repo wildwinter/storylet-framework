@@ -102,7 +102,7 @@
      }
  
      // Call when actually drawn - updates the redraw counter
-    void Storylet::OnPlayed(int currentDraw, Context& context)
+    void Storylet::OnPlayed(int currentDraw, Context& context, const std::string& outcome, DumpEval* dumpEval)
      {
         if (redraw == REDRAW_NEVER)
         {
@@ -112,19 +112,26 @@
         {
             _nextPlay = currentDraw + redraw;
         }
-        if (!updateOnPlayed.empty())
+
+        if (!outcomes.empty() && outcomes.find(outcome) != outcomes.end())
         {
-            ContextUtils::UpdateContext(context, updateOnPlayed);
+            const KeyedMap& updates = std::any_cast<const KeyedMap&>(outcomes.at(outcome));
+            if (dumpEval)
+            {
+                dumpEval->push_back("Updating context for " + id + " with outcome '" + outcome + "'");
+            }
+            ContextUtils::UpdateContext(context, updates, dumpEval);
         }
     }
 
-    void Storylet::Play() {
+    void Storylet::Play(const std::string& outcome, DumpEval* dumpEval)
+    {
         if (!_deck)
         {
             throw std::runtime_error("Storylet not part of a deck");
             
         }
-        _deck->Play(*this);
+        _deck->Play(*this, outcome, dumpEval);
     }
 
     Deck::Deck() {
@@ -204,7 +211,7 @@
         return drawPile;
     }
 
-    std::vector<std::shared_ptr<Storylet>> Deck::DrawAndPlay(int count, std::function<bool(const Storylet&)> filter, DumpEval* dumpEval) {
+    std::vector<std::shared_ptr<Storylet>> Deck::DrawAndPlay(int count, std::function<bool(const Storylet&)> filter, const std::string& outcome, DumpEval* dumpEval) {
         std::vector<std::shared_ptr<Storylet>> drawPile = Draw(count, filter, dumpEval);
         for (auto& storylet : drawPile)
         {
@@ -222,7 +229,7 @@
         return nullptr;
     }
 
-    std::shared_ptr<Storylet> Deck::DrawAndPlaySingle(std::function<bool(const Storylet&)> filter, DumpEval* dumpEval) {
+    std::shared_ptr<Storylet> Deck::DrawAndPlaySingle(std::function<bool(const Storylet&)> filter, const std::string& outcome, DumpEval* dumpEval) {
         std::vector<std::shared_ptr<Storylet>> drawPile = Draw(1, filter, dumpEval);
         if (drawPile.size() > 0)
         {
@@ -247,8 +254,9 @@
         storylet->_deck = this;
     }
 
-    void Deck::Play(Storylet& storylet) {
+    void Deck::Play(Storylet& storylet, const std::string& outcome, DumpEval* dumpEval)
+    {
         _currentDraw++;
-        storylet.OnPlayed(_currentDraw, *context);
+        storylet.OnPlayed(_currentDraw, *context, outcome, dumpEval);
     }
  }

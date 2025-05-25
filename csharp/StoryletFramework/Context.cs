@@ -65,6 +65,9 @@ public static class ContextUtils
 
             var result = EvalExpression(expression, context, dumpEval);
 
+            if (dumpEval != null)
+                dumpEval.Add($"Setting {propName} to {result}");
+
             if (!context.ContainsKey(propName))
                 throw new KeyNotFoundException($"Context variable '{propName}' is undefined.");
 

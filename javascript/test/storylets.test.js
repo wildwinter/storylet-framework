@@ -92,6 +92,7 @@ describe('Storylets', () => {
       }
 
       assert.equal(true, path.includes("market")||path.includes("slums")||path.includes("bridge"));
+      assert.equal(true, context.noble_storyline>0);
     });
 
   });  

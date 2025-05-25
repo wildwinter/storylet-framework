@@ -46,7 +46,8 @@ def update_context(context: Dict[str, Any], updates: Dict[str, Any], dump_eval: 
         if dump_eval is not None:
             dump_eval.append(f"UpdateContext: Evaluating {prop_name} = {expr}")
         result = eval_expression(expr, context, dump_eval)
-        #print(f"Setting {prop_name} to {result}");
+        if dump_eval is not None:
+            dump_eval.append(f"Setting {prop_name} to {result}");
         if prop_name not in context:
             raise KeyError(f"Context var: '{prop_name}' undefined.")
         context[prop_name] = result

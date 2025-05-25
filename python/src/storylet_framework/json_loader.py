@@ -26,8 +26,8 @@ def storylet_from_json(json, defaults):
         storylet.condition = config["condition"]
     if "priority" in config:
         storylet.priority = config["priority"]
-    if "updateOnPlayed" in config:
-        storylet.update_on_played = config["updateOnPlayed"]
+    if "outcomes" in config:
+        storylet.outcomes = config["outcomes"]
     if "content" in config:
         storylet.content = config["content"]
 

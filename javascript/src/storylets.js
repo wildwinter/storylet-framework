@@ -26,12 +26,9 @@ export class Storylet {
     //   REDRAW_NEVER = a one-shot
     this.redraw = REDRAW_ALWAYS;
 
-    // Updates to context, processed when this storylet is drawn.
-    // Can use to e.g. set a flag when a storylet is drawn.
-    // Only for lightweight behaviours and won't work well for
-    // conditionals, might be best to implement
-    // something app-specific.
-    this.updateOnPlayed = null;
+    // Each outcome contains a list of updates to context, processed when this storylet is played.
+    // Can use to e.g. set a flag when a storylet is played.
+    this.outcomes = null;
 
     // Precompiled
     this._condition = null;
@@ -111,23 +108,29 @@ export class Storylet {
   }
 
   // Call when actually played - updates the play counter.
-  onPlayed(currentPlay, context) {
+  onPlayed(currentPlay, context, outcome="default", dump_eval = null) {
     if (this.redraw == REDRAW_NEVER) {
       this._nextPlay = -1;
     } else {
       this._nextPlay = currentPlay + this.redraw;
     }
-    if (this.updateOnPlayed)
-      updateContext(context, this.updateOnPlayed);
-
+    if (this.outcomes) {
+      if (!(outcome in this.outcomes)) {
+        throw new Error(`Outcome '${outcome}' not defined in storylet '${this.id}'.`);
+      }
+      if (dump_eval) {
+        dump_eval.push(`Updating context for ${this.id} with outcome '${outcome}'`);
+      }
+      updateContext(this.deck.context, this.outcomes[outcome], dump_eval);
+    }
   }
 
   // Convenience. Play the storylet. Updates draw counters and applies any updateOnPlayed
-  play() {
+  play(outcome="default", dump_eval = null) {
     if (!this.deck) {
       throw new Error("Storylet not in deck.");
     }
-    this.deck.play(this);
+    this.deck.play(this, outcome, dump_eval);
   }
 
 }
@@ -227,10 +230,10 @@ export class Deck {
     return count > -1 ? drawPile.slice(0, count) : drawPile;
   }
 
-  drawAndPlay(count = -1, filter=null, dump_eval = null) {
+  drawAndPlay(count = -1, filter=null, outcome="default", dump_eval = null) {
     const drawn = this.draw(count, filter, dump_eval);
     for (let i = 0; i < drawn.length; i++) {
-      drawn[i].play();
+      drawn[i].play(outcome, dump_eval);
     }
     return drawn;
   }
@@ -243,10 +246,10 @@ export class Deck {
     return drawn[0];
   }
 
-  drawAndPlaySingle(filter = null, dump_eval = null) {
+  drawAndPlaySingle(filter = null, outcome="default", dump_eval = null) {
     const drawn = this.drawSingle(filter, dump_eval);
     if (drawn) {
-      drawn.play();
+      drawn.play(outcome, dump_eval);
     }
     return drawn;
   }
@@ -264,8 +267,8 @@ export class Deck {
   }
 
   // Mark this storylet as played. If it's got an updateOnPlayed, make that happen.
-  play(storylet) {
+  play(storylet, outcome="default", dump_eval = null) {
     this._currentPlay++;
-    storylet.onPlayed(this._currentPlay, this.context);
+    storylet.onPlayed(this._currentPlay, this.context, outcome, dump_eval);
   }
 }

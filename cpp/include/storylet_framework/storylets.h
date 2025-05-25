@@ -29,7 +29,7 @@ namespace StoryletFramework {
         std::string id; // Unique ID of the storylet
         std::any content; // Application-defined content
         int redraw = REDRAW_ALWAYS; // Redraw setting
-        KeyedMap updateOnPlayed; // Updates to context
+        KeyedMap outcomes; // Updates to context
 
     private:
         std::shared_ptr<ExpressionParser::ExpressionNode> _condition; // Precompiled condition
@@ -38,7 +38,7 @@ namespace StoryletFramework {
         Deck* _deck = nullptr; // Pointer to the deck this storylet belongs to
 
         // Call when actually drawn - updates the redraw counter
-        void OnPlayed(int currentPlay, Context& context);
+        void OnPlayed(int currentPlay, Context& context, const std::string& outcome = "default", DumpEval* dumpEval = nullptr);
 
     public:
         // Constructor
@@ -63,7 +63,7 @@ namespace StoryletFramework {
         // Check if the storylet is available to draw according to its redraw rules
         bool CanDraw(int currentPlay) const;
 
-        void Play();
+        void Play(const std::string& outcome = "default", DumpEval* dumpEval = nullptr);
     };
 
     class Deck
@@ -77,14 +77,14 @@ namespace StoryletFramework {
         explicit Deck(Context& context);
         void Reset();
         std::vector<std::shared_ptr<Storylet>> Draw(int count=-1, std::function<bool(const Storylet&)> filter = nullptr, DumpEval* dumpEval = nullptr);
-        std::vector<std::shared_ptr<Storylet>> DrawAndPlay(int count=-1, std::function<bool(const Storylet&)> filter= nullptr, DumpEval* dumpEval = nullptr);
+        std::vector<std::shared_ptr<Storylet>> DrawAndPlay(int count=-1, std::function<bool(const Storylet&)> filter= nullptr, const std::string& outcome = "default", DumpEval* dumpEval = nullptr);
         std::shared_ptr<Storylet> DrawSingle(std::function<bool(const Storylet&)> filter= nullptr, DumpEval* dumpEval = nullptr);
-        std::shared_ptr<Storylet> DrawAndPlaySingle(std::function<bool(const Storylet&)> filter= nullptr, DumpEval* dumpEval = nullptr);
+        std::shared_ptr<Storylet> DrawAndPlaySingle(std::function<bool(const Storylet&)> filter= nullptr, const std::string& outcome = "default", DumpEval* dumpEval = nullptr);
  
  
         std::shared_ptr<Storylet> GetStorylet(const std::string& id) const;
         void AddStorylet(std::shared_ptr<Storylet> storylet);
-        void Play(Storylet& storylet);
+        void Play(Storylet& storylet, const std::string& outcome = "default", DumpEval* dumpEval = nullptr);
 
         std::shared_ptr<Context> context;
         bool useSpecificity = false;

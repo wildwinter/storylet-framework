@@ -30,8 +30,8 @@ export function storyletFromJson(json, defaults) {
     if ("priority" in config) {
       storylet.priority = config.priority;
     }
-    if ("updateOnPlayed" in config) {
-      storylet.updateOnPlayed = config.updateOnPlayed;
+    if ("outcomes" in config) {
+      storylet.outcomes = config.outcomes;
     }
     if ("content" in config) {
       storylet.content = config.content;

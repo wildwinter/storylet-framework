@@ -43,9 +43,9 @@ namespace StoryletFramework
             storylet->SetPriority(val.get<std::string>());
         }
 
-        if (config.contains("updateOnPlayed"))
+        if (config.contains("outcomes"))
         {
-            storylet->updateOnPlayed = JsonToKeyedMap(config["updateOnPlayed"]);
+            storylet->outcomes = JsonToKeyedMap(config["outcomes"]);
         }
         if (config.contains("content"))
         {

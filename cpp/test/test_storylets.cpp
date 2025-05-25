@@ -2,6 +2,7 @@
 // Copyright (c) 2025 Ian Thomas
 
 #include "storylet_framework/json_loader.h"
+#include "storylet_framework/context.h"
 #include "catch_amalgamated.hpp"
 #include "test_utils.h"
 #include <fstream>
@@ -136,4 +137,8 @@ TEST_CASE("StreetSystem") {
     REQUIRE((std::find(path.begin(), path.end(), "market") != path.end() ||
             std::find(path.begin(), path.end(), "slums") != path.end() ||
             std::find(path.begin(), path.end(), "bridge") != path.end()));
+
+    //std::cout << ContextUtils::DumpContext(context) << std::endl;
+
+    REQUIRE(std::any_cast<double>(context["noble_storyline"]) > 0);
 }

@@ -16,7 +16,7 @@ namespace StoryletFramework
     ExpressionParser::Parser expressionParser;
 
     // Evaluate an expression
-    std::any ContextUtils::EvalExpression(const std::any& val, Context& context, DumpEval* dumpEval)
+    std::any ContextUtils::EvalExpression(const std::any& val, const Context& context, DumpEval* dumpEval)
     {
         if (val.type() == typeid(bool) || val.type() == typeid(double) || val.type() == typeid(int))
         {
@@ -79,6 +79,12 @@ namespace StoryletFramework
             }
 
             auto result = EvalExpression(expression, context, dumpEval);
+
+            if (dumpEval)
+            {
+                dumpEval->push_back("Setting " + propName + " to " + std::any_cast<std::string>(expression));
+            }
+
             context[propName] = result;
         }
     }
@@ -93,14 +99,29 @@ namespace StoryletFramework
             const auto& propName = kvp.first;
             const auto& expression = kvp.second;
 
-            if (expression.type() == typeid(std::function<void()>))
+            if (expression.type() == typeid(ExpressionParser::FunctionWrapper))
             {
                 output << propName << " = <function>\n";
             }
-            else if (expression.type() == typeid(bool) || expression.type() == typeid(double) || expression.type() == typeid(int) || expression.type() == typeid(std::string))
+            else if (expression.type() == typeid(bool))
             {
-                auto result = EvalExpression(expression, const_cast<Context&>(context));
-                output << propName << " = " << std::any_cast<std::string>(result) << "\n";
+                output << propName << " = " << (std::any_cast<bool>(expression) ? "true" : "false") << "\n";
+            }
+            else if (expression.type() == typeid(int))
+            {
+                output << propName << " = " << std::any_cast<int>(expression) << "\n";
+            } 
+            else if (expression.type() == typeid(std::string))
+            {
+                output << propName << " = \"" << std::any_cast<std::string>(expression) << "\"\n";
+            } 
+            else if (expression.type() == typeid(double))
+            {
+                output << propName << " = " << std::any_cast<double>(expression) << "\n";
+            } 
+            else
+            {
+                output << propName << " = <unknown type>\n";
             }
         }
 

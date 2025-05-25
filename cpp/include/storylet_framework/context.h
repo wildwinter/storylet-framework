@@ -17,7 +17,7 @@ namespace StoryletFramework
     public:
 
         // Evaluate an expression
-        static std::any EvalExpression(const std::any& val, Context& context, DumpEval* dumpEval = nullptr);
+        static std::any EvalExpression(const std::any& val, const Context& context, DumpEval* dumpEval = nullptr);
 
         // Initialize context with properties
         static void InitContext(Context& context, const KeyedMap& properties, DumpEval* dumpEval = nullptr);

@@ -44,9 +44,9 @@ public static class JsonLoader
             storylet.SetPriority(config["priority"]);
         }
 
-        if (config.ContainsKey("updateOnPlayed"))
+        if (config.ContainsKey("outcomes"))
         {
-            storylet.UpdateOnPlayed = (KeyMap)config["updateOnPlayed"];
+            storylet.Outcomes = (KeyMap)config["outcomes"];
         }
 
         if (config.ContainsKey("content"))
