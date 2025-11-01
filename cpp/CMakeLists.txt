@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Add include directory
-include_directories(include lib/expression-parser/include lib/nlohmann-json)
+# include_directories(include lib/expression-parser/include lib/nlohmann-json)
 
 # Source files
 file(GLOB LIB_HEADERS 
@@ -33,6 +33,14 @@ install(TARGETS ${PROJECT_NAME}
     LIBRARY DESTINATION lib  # For shared libraries
     ARCHIVE DESTINATION lib  # For static libraries
     PUBLIC_HEADER DESTINATION include/storylet_framework
+)
+
+# Add include directories to the library target (scoped)
+target_include_directories(${PROJECT_NAME}
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/expression-parser/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/nlohmann-json
 )
 
 # Add a test executable
