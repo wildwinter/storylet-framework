@@ -1,5 +1,5 @@
 {
-    "name": "expression-parser-py",
+    "name": "storylet-framework-py",
     "scripts": {
         "test": "python3 -m unittest discover -s tests",
         "dist": "rm -rf ./dist && python3 create_dist.py && cp ../README.md ./dist",
