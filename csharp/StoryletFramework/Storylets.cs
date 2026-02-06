@@ -31,6 +31,7 @@ public class Storylet
 
     // The next draw this should be available
     private int _nextPlay = 0;
+    internal int NextPlay { get => _nextPlay; set => _nextPlay = value; }
 
     internal Deck? deck = null;
 
@@ -269,6 +270,35 @@ public class Deck
 
         _all[storylet.Id] = storylet;
         storylet.deck = this;
+    }
+
+    // Save the deck's play state to a JSON-serializable dictionary.
+    public Dictionary<string, object> SaveStateToJson()
+    {
+        var storylets = new Dictionary<string, object>();
+        foreach (var (id, storylet) in _all)
+        {
+            storylets[id] = storylet.NextPlay;
+        }
+        return new Dictionary<string, object>
+        {
+            { "currentPlay", _currentPlay },
+            { "storylets", storylets }
+        };
+    }
+
+    // Restore deck play state from a previously saved dictionary.
+    public void LoadStateFromJson(Dictionary<string, object> json)
+    {
+        _currentPlay = Convert.ToInt32(json["currentPlay"]);
+        var storylets = (Dictionary<string, object>)json["storylets"];
+        foreach (var (id, nextPlay) in storylets)
+        {
+            if (_all.TryGetValue(id, out var storylet))
+            {
+                storylet.NextPlay = Convert.ToInt32(nextPlay);
+            }
+        }
     }
 
     public void Play(Storylet storylet, string outcome = "default", List<string>? dumpEval = null) {

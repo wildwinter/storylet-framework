@@ -10,6 +10,7 @@
 #include <unordered_map>
 #include <any>
 #include <vector>
+#include <json.hpp>
 #include "expression_parser/parser.h"
 #include "utils.h"
 #include "context.h"
@@ -85,6 +86,11 @@ namespace StoryletFramework {
         std::shared_ptr<Storylet> GetStorylet(const std::string& id) const;
         void AddStorylet(std::shared_ptr<Storylet> storylet);
         void Play(Storylet& storylet, const std::string& outcome = "default", DumpEval* dumpEval = nullptr);
+
+        // Save the deck's play state to a JSON object.
+        nlohmann::json SaveStateToJson() const;
+        // Restore deck play state from a previously saved JSON object.
+        void LoadStateFromJson(const nlohmann::json& json);
 
         std::shared_ptr<Context> context;
         bool useSpecificity = false;

@@ -254,6 +254,33 @@
         storylet->_deck = this;
     }
 
+    nlohmann::json Deck::SaveStateToJson() const
+    {
+        nlohmann::json storylets;
+        for (const auto& [id, storylet] : _all)
+        {
+            storylets[id] = storylet->_nextPlay;
+        }
+        return {
+            {"currentPlay", _currentDraw},
+            {"storylets", storylets}
+        };
+    }
+
+    void Deck::LoadStateFromJson(const nlohmann::json& json)
+    {
+        _currentDraw = json.at("currentPlay").get<int>();
+        const auto& storylets = json.at("storylets");
+        for (const auto& [id, nextPlay] : storylets.items())
+        {
+            auto it = _all.find(id);
+            if (it != _all.end())
+            {
+                it->second->_nextPlay = nextPlay.get<int>();
+            }
+        }
+    }
+
     void Deck::Play(Storylet& storylet, const std::string& outcome, DumpEval* dumpEval)
     {
         _currentDraw++;

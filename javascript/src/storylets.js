@@ -161,7 +161,7 @@ export class Deck {
 
   // Reset the whole pack, including all redraw counters.
   reset() {
-    this.currentDraw = 0;
+    this._currentPlay = 0;
     for (const storylet of this._all.values()) {
       storylet.reset();
     }
@@ -264,6 +264,29 @@ export class Deck {
     }
     this._all.set(storylet.id, storylet);
     storylet.deck = this;
+  }
+
+  // Save the deck's play state to a JSON-serializable object.
+  saveStateToJson() {
+    const storylets = {};
+    for (const [id, storylet] of this._all) {
+      storylets[id] = storylet._nextPlay;
+    }
+    return {
+      currentPlay: this._currentPlay,
+      storylets
+    };
+  }
+
+  // Restore deck play state from a previously saved JSON object.
+  loadStateFromJson(json) {
+    this._currentPlay = json.currentPlay;
+    for (const [id, nextPlay] of Object.entries(json.storylets)) {
+      const storylet = this._all.get(id);
+      if (storylet) {
+        storylet._nextPlay = nextPlay;
+      }
+    }
   }
 
   // Mark this storylet as played. If it's got an updateOnPlayed, make that happen.

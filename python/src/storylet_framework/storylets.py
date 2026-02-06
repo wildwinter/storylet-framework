@@ -222,7 +222,25 @@ class Deck:
         self._all[storylet.id] = storylet
         storylet.deck = self
 
-  # Mark this storylet as played.
+    # Save the deck's play state to a JSON-serializable dict.
+    def save_state_to_json(self):
+        storylets = {}
+        for id, storylet in self._all.items():
+            storylets[id] = storylet._next_play
+        return {
+            "currentPlay": self._current_play,
+            "storylets": storylets
+        }
+
+    # Restore deck play state from a previously saved dict.
+    def load_state_from_json(self, json):
+        self._current_play = json["currentPlay"]
+        for id, next_play in json["storylets"].items():
+            storylet = self._all.get(id)
+            if storylet is not None:
+                storylet._next_play = next_play
+
+    # Mark this storylet as played.
     def play(self, storylet, outcome="default", dump_eval=None):
         self._current_play += 1
         storylet.on_played(self._current_play, outcome, dump_eval)
