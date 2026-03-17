@@ -7,3 +7,5 @@ __pycache__
 obj
 bin
 build
+.gemini
+.claude
