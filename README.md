@@ -1,4 +1,9 @@
 # storylet-framework
+
+**NOTE:** I would *strongly* suggest you take a look at my other project, [Storylet Studio](https://storylet.studio), which is a
+much more developed version of this idea, provides an authoring tool, runtimes, and test environments. I am unlikely to expand
+or maintain this library.
+
 **storylet-framework** is a multi-language implementation of a simple storylet framework. It allows you to specify sets of storylets in JSON files, and run code that will evaluate at runtime which storylets should be available in your current context.
 
 This is designed to be cross-platform and implementation agnostic when it comes to the actual contents of your storylets.
