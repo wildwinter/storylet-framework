@@ -1,6 +1,6 @@
 # storylet-framework
 
-**NOTE:** I would *strongly* suggest you take a look at my other project, [Storylet Studio](https://storylet.studio), which is a
+**NOTE:** I would *strongly* suggest you take a look at my other project, [Storylet Studio](https://storylets.dev), which is a
 much more developed version of this idea, provides an authoring tool, runtimes, and test environments. I am unlikely to expand
 or maintain this library.
 

@@ -32,8 +32,5 @@
   },
   "keywords": [],
   "author": "Ian Thomas",
-  "license": "MIT",
-  "dependencies": {
-    "@rollup/plugin-terser": "^0.4.4"
-  }
+  "license": "MIT"
 }
